@@ -6,119 +6,7 @@ Study app is an application where student (me, and some other of my friends) tha
 
 Welcome, team members! This document will guide you through setting up your development environment, understanding the contribution workflow, and making your first contribution. Please read this carefully.
 
-### 1. Project Setup & Installation
-
-Follow these steps to get the project running on your local machine.
-
-#### 1.1 Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-*   **Git**: Version Control System.
-    *   [Download Git](https://git-scm.com/downloads)
-    *   Verify installation: Open your terminal/command prompt and run `git --version`.
-*   **Node.js & npm**: JavaScript runtime and package manager. (Required if this is a JavaScript/frontend/backend project)
-    *   [Download Node.js (LTS version recommended)](https://nodejs.org/en/download/)
-    *   Verify installation: Open your terminal/command prompt and run `node -v` and `npm -v`.
-*   **Python & pip**: Python interpreter and package installer. (Required if this is a Python/backend project)
-    *   [Download Python](https://www.python.org/downloads/)
-    *   Verify installation: Open your terminal/command prompt and run `python --version` (or `python3 --version`) and `pip --version` (or `pip3 --version`).
-*   **Docker & Docker Compose**: Containerization platform. (Required if the project uses Docker)
-    *   [Download Docker Desktop](https://www.docker.com/products/docker-desktop)
-    *   Verify installation: Open your terminal/command prompt and run `docker --version` and `docker compose version`.
-*   **Code Editor**: Visual Studio Code is highly recommended.
-    *   [Download VS Code](https://code.visualstudio.com/download)
-    *   Install recommended extensions (e.g., Prettier, ESLint, Python, Docker).
-
-#### 1.2 Initial Setup
-
-1.  **Fork the Repository (One-time step for your personal GitHub account)**
-    *   Go to the main project repository on GitHub: `[Link to the main GitHub repo, e.g., https://github.com/your-username/study-app]`
-    *   Click the "Fork" button in the top right corner. This creates a copy of the repository under your GitHub account.
-
-2.  **Clone Your Fork to Your Local Machine**
-    *   Open your terminal or command prompt.
-    *   Navigate to the directory where you want to store the project (e.g., `cd ~/Documents/Projects`).
-    *   Clone your forked repository:
-        ```bash
-        git clone https://github.com/YOUR_GITHUB_USERNAME/study-app.git
-        ```
-        (Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username.)
-    *   Navigate into the cloned project directory:
-        ```bash
-        cd study-app
-        ```
-
-3.  **Add the Upstream Remote (One-time step)**
-    *   The "upstream" remote refers to the original project repository. This allows you to sync changes from the main project.
-    *   Inside your `study-app` directory in the terminal, run:
-        ```bash
-        git remote add upstream https://github.com/THE_ORIGINAL_REPO_OWNER/study-app.git
-        ```
-        (Replace `THE_ORIGINAL_REPO_OWNER` with the username of the original repository owner, likely `me` or the organization.)
-    *   Verify your remotes:
-        ```bash
-        git remote -v
-        ```
-        You should see both `origin` (your fork) and `upstream` (the main project).
-
-4.  **Install Project Dependencies**
-    *   **For JavaScript/Node.js Projects:**
-        ```bash
-        npm install
-        # or if using yarn
-        # yarn install
-        ```
-    *   **For Python Projects:**
-        ```bash
-        python -m venv venv
-        source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-        pip install -r requirements.txt
-        ```
-    *   **For Dockerized Projects:**
-        ```bash
-        docker compose build
-        ```
-        (This will build all services defined in `docker-compose.yml`)
-
-5.  **Environment Variables (If Applicable)**
-    *   Check if there's a `.env.example` file. If so, create a new file named `.env` in the root directory.
-    *   Copy the contents of `.env.example` into `.env` and fill in any necessary sensitive information (e.g., API keys, database URLs). **Do not commit `.env` to Git!**
-
-6.  **Database Setup (If Applicable)**
-    *   If the project requires a database, you might need to run migrations or seed data:
-        *   **For JavaScript/Node.js (e.g., TypeORM, Prisma, Sequelize):**
-            ```bash
-            npm run migrate # or similar command defined in package.json
-            npm run seed    # or similar command
-            ```
-        *   **For Python (e.g., Django, Flask-SQLAlchemy):**
-            ```bash
-            python manage.py makemigrations # If using Django
-            python manage.py migrate
-            python manage.py loaddata initial_data.json # Or similar seeding command
-            ```
-        *   **For Dockerized databases:** Ensure your `docker-compose.yml` is set up correctly, and the database service is running before attempting migrations.
-
-7.  **Run the Application**
-    *   **For JavaScript/Node.js Projects:**
-        ```bash
-        npm start
-        # or `npm run dev` for development server with hot-reloading
-        ```
-    *   **For Python Projects:**
-        ```bash
-        python manage.py runserver # If using Django
-        flask run # If using Flask, after setting FLASK_APP=app.py
-        ```
-    *   **For Dockerized Projects:**
-        ```bash
-        docker compose up
-        # or `docker compose up -d` to run in detached mode
-        ```
-    *   Access the application in your web browser, typically at `http://localhost:3000` or `http://localhost:8000`, depending on the project configuration.
-
-### 2. GitHub Workflow for Contributions
+### 1. GitHub Workflow for Contributions
 
 This project uses a "Forking Workflow" combined with "Feature Branches".
 
@@ -196,7 +84,7 @@ This project uses a "Forking Workflow" combined with "Feature Branches".
         git push origin --delete feature/your-feature-name # Delete remote branch on your fork
         ```
 
-### 3. Coding Standards and Best Practices
+### 2. Coding Standards and Best Practices
 
 *   **Code Style**: Adhere to the project's established coding style. We use [ESLint/Prettier for JS/TS] and [Black/Flake8 for Python]. Most editors can integrate these tools.
 *   **Testing**: Write unit and integration tests for new features and bug fixes.
@@ -205,4 +93,3 @@ This project uses a "Forking Workflow" combined with "Feature Branches".
 *   **Be Respectful**: Be kind and constructive in your feedback and interactions.
 
 Thank you for contributing to the Study App! Let's build something amazing together.
-```
