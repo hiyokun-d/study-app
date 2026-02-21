@@ -1,271 +1,91 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/common/avatar_widget.dart';
 import '../../../data/dummy_data.dart';
 import '../../../models/live_class_model.dart';
 
-/// Live class screen for viewing and participating in live sessions
+/// Modern live class screen with theme-aware styling
 class LiveClassScreen extends StatefulWidget {
-  const LiveClassScreen({super.key, this.liveClassId});
+  const LiveClassScreen({
+    super.key,
+    required this.classId,
+  });
 
-  final String? liveClassId;
+  final String classId;
 
   @override
   State<LiveClassScreen> createState() => _LiveClassScreenState();
 }
 
 class _LiveClassScreenState extends State<LiveClassScreen> {
-  LiveClassModel? _liveClass;
-  bool _isChatVisible = true;
-  bool _isHandRaised = false;
-  final _chatController = TextEditingController();
-  final List<LiveChatMessage> _chatMessages = [];
+  late LiveClassModel _liveClass;
+  bool _isChatVisible = false;
+  bool _isJoined = false;
+  final TextEditingController _chatController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  // Mock chat messages
+  final List<ChatMessage> _messages = [
+    ChatMessage(name: 'Alice', message: 'Hello everyone!', isMe: false),
+    ChatMessage(name: 'Bob', message: 'Hi! Excited for this class', isMe: false),
+    ChatMessage(name: 'You', message: 'Hey everyone!', isMe: true),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadLiveClass();
-    _loadChatMessages();
-  }
-
-  void _loadLiveClass() {
-    if (widget.liveClassId != null) {
-      _liveClass = DummyData.liveClasses.firstWhere(
-        (lc) => lc.id == widget.liveClassId,
-        orElse: () => DummyData.liveClasses.first,
-      );
-    } else {
-      _liveClass = DummyData.liveClasses.first;
-    }
-  }
-
-  void _loadChatMessages() {
-    _chatMessages.addAll([
-      LiveChatMessage(
-        id: '1',
-        userName: 'Alice Johnson',
-        message: 'This is so helpful!',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-      ),
-      LiveChatMessage(
-        id: '2',
-        userName: 'Bob Smith',
-        message: 'Can you explain that again?',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
-      ),
-      LiveChatMessage(
-        id: '3',
-        userName: 'Carol White',
-        message: 'Thanks for the explanation!',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
-      ),
-    ]);
-  }
-
-  void _sendMessage() {
-    final text = _chatController.text.trim();
-    if (text.isEmpty) return;
-
-    setState(() {
-      _chatMessages.add(LiveChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        userName: 'You',
-        message: text,
-        timestamp: DateTime.now(),
-        isMe: true,
-      ));
-      _chatController.clear();
-    });
-  }
-
-  void _toggleHand() {
-    setState(() {
-      _isHandRaised = !_isHandRaised;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isHandRaised
-              ? 'Hand raised! The teacher will be notified.'
-              : 'Hand lowered.',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _leaveClass() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave Class?'),
-        content: const Text(
-          'Are you sure you want to leave this live class? You can rejoin anytime.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              'Leave',
-              style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
+    _liveClass = DummyData.liveClasses.firstWhere(
+      (c) => c.id == widget.classId,
+      orElse: () => DummyData.liveClasses.first,
     );
   }
 
   @override
   void dispose() {
     _chatController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _sendMessage() {
+    if (_chatController.text.trim().isEmpty) return;
+    
+    setState(() {
+      _messages.add(ChatMessage(
+        name: 'You',
+        message: _chatController.text.trim(),
+        isMe: true,
+      ));
+      _chatController.clear();
+    });
+    
+    // Scroll to bottom
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_liveClass == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Main content
-          Column(
-            children: [
-              // Video area
-              _buildVideoArea(),
-              // Controls
-              _buildControls(),
-              // Chat area
-              if (_isChatVisible) _buildChatArea(),
-            ],
-          ),
-          // Top overlay
-          _buildTopOverlay(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVideoArea() {
-    return Expanded(
-      child: Container(
-        color: AppColors.textPrimary,
-        child: Stack(
+      backgroundColor: colorScheme.surface,
+      body: SafeArea(
+        child: Column(
           children: [
-            // Video placeholder
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.videocam,
-                      size: 50,
-                      color: Colors.white54,
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.md),
-                  const Text(
-                    'Live Video Stream',
-                    style: TextStyle(
-                      color: Colors.white54,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Live badge
-            Positioned(
-              top: 60,
-              left: AppSizes.md,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.md,
-                  vertical: AppSizes.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: AppSizes.sm),
-                    const Text(
-                      AppStrings.live,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Viewer count
-            Positioned(
-              top: 60,
-              right: AppSizes.md,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.md,
-                  vertical: AppSizes.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.visibility,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: AppSizes.sm),
-                    Text(
-                      '${_liveClass!.viewerCount}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            _buildHeader(context),
+            Expanded(
+              child: _isJoined
+                  ? _buildLiveContent(context)
+                  : _buildPreJoinContent(context),
             ),
           ],
         ),
@@ -273,62 +93,544 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
     );
   }
 
-  Widget _buildControls() {
+  Widget _buildHeader(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
       padding: const EdgeInsets.all(AppSizes.md),
-      color: AppColors.darkSurface,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: colorScheme.outlineVariant),
+        ),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildControlButton(
-            icon: _isHandRaised ? Icons.back_hand : Icons.back_hand_outlined,
-            label: 'Raise Hand',
-            isActive: _isHandRaised,
-            onTap: _toggleHand,
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(
+              Icons.arrow_back_ios_new,
+              color: colorScheme.onSurface,
+            ),
           ),
-          _buildControlButton(
-            icon: Icons.chat,
-            label: 'Chat',
-            isActive: _isChatVisible,
-            onTap: () {
-              setState(() {
-                _isChatVisible = !_isChatVisible;
-              });
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: _isJoined ? colorScheme.error : Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: AppSizes.sm),
+                    Text(
+                      _isJoined ? 'Live Now' : 'Upcoming',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: _isJoined ? colorScheme.error : Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  _liveClass.title,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          if (_isJoined) ...[
+            IconButton(
+              onPressed: () {
+                setState(() => _isChatVisible = !_isChatVisible);
+              },
+              icon: Icon(
+                _isChatVisible ? Icons.chat_bubble : Icons.chat_bubble_outline,
+                color: colorScheme.primary,
+              ),
+            ),
+            IconButton(
+              onPressed: () {},
+              icon: Icon(
+                Icons.more_vert,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreJoinContent(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSizes.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Video Preview
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.videocam_off_outlined,
+                        size: 40,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSizes.md),
+                    Text(
+                      'Class hasn\'t started yet',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: AppSizes.lg),
+          
+          // Teacher Info
+          Container(
+            padding: const EdgeInsets.all(AppSizes.md),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            ),
+            child: Row(
+              children: [
+                AvatarWidget(
+                  name: _liveClass.teacher?.name ?? 'Teacher',
+                  size: AvatarSize.large,
+                ),
+                const SizedBox(width: AppSizes.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _liveClass.teacher?.name ?? 'Teacher',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Expert Instructor',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {},
+                  child: const Text('View Profile'),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: AppSizes.lg),
+          
+          // Class Info
+          Text(
+            'Class Details',
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppSizes.sm),
+          _buildInfoRow(
+            context,
+            icon: Icons.calendar_today_outlined,
+            label: 'Date',
+            value: _liveClass.formattedDate,
+          ),
+          _buildInfoRow(
+            context,
+            icon: Icons.access_time_outlined,
+            label: 'Time',
+            value: _liveClass.formattedTime,
+          ),
+          _buildInfoRow(
+            context,
+            icon: Icons.people_outline,
+            label: 'Enrolled',
+            value: '${_liveClass.viewerCount} students',
+          ),
+          
+          const SizedBox(height: AppSizes.xl),
+          
+          // Countdown
+          Container(
+            padding: const EdgeInsets.all(AppSizes.lg),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  colorScheme.primaryContainer,
+                  colorScheme.primaryContainer.withOpacity(0.3),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Class starts in',
+                  style: textTheme.titleSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildCountdownItem(context, '00', 'Hours'),
+                    const SizedBox(width: AppSizes.sm),
+                    Text(':', style: textTheme.headlineMedium),
+                    const SizedBox(width: AppSizes.sm),
+                    _buildCountdownItem(context, '15', 'Mins'),
+                    const SizedBox(width: AppSizes.sm),
+                    Text(':', style: textTheme.headlineMedium),
+                    const SizedBox(width: AppSizes.sm),
+                    _buildCountdownItem(context, '30', 'Secs'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: AppSizes.xl),
+          
+          // Join Button
+          PrimaryButton(
+            text: 'Join Class',
+            onPressed: () {
+              setState(() => _isJoined = true);
             },
           ),
-          _buildControlButton(
-            icon: Icons.people,
-            label: 'Participants',
-            onTap: () {
-              _showParticipantsSheet();
-            },
-          ),
-          _buildControlButton(
-            icon: Icons.exit_to_app,
-            label: 'Leave',
-            isDestructive: true,
-            onTap: _leaveClass,
+          
+          const SizedBox(height: AppSizes.md),
+          
+          // Set Reminder
+          Center(
+            child: TextButton.icon(
+              onPressed: () {},
+              icon: Icon(
+                Icons.notifications_outlined,
+                color: colorScheme.primary,
+              ),
+              label: const Text('Set Reminder'),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildControlButton({
+  Widget _buildInfoRow(
+    BuildContext context, {
     required IconData icon,
     required String label,
-    bool isActive = false,
-    bool isDestructive = false,
-    VoidCallback? onTap,
+    required String value,
   }) {
-    Color color;
-    if (isDestructive) {
-      color = AppColors.error;
-    } else if (isActive) {
-      color = AppColors.primary;
-    } else {
-      color = Colors.white;
-    }
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: AppSizes.sm),
+          Text(
+            label,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCountdownItem(
+    BuildContext context,
+    String value,
+    String label,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          ),
+          child: Center(
+            child: Text(
+              value,
+              style: textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.primary,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSizes.xs),
+        Text(
+          label,
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLiveContent(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Row(
+      children: [
+        // Video Area
+        Expanded(
+          child: Column(
+            children: [
+              // Video Player
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.all(AppSizes.md),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                  ),
+                  child: Stack(
+                    children: [
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: colorScheme.primaryContainer,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.play_arrow_rounded,
+                                size: 48,
+                                color: colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(height: AppSizes.md),
+                            Text(
+                              'Live Stream',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Live Badge
+                      Positioned(
+                        top: AppSizes.md,
+                        left: AppSizes.md,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSizes.sm,
+                            vertical: AppSizes.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colorScheme.error,
+                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'LIVE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Viewer Count
+                      Positioned(
+                        top: AppSizes.md,
+                        right: AppSizes.md,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSizes.sm,
+                            vertical: AppSizes.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.visibility_outlined,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${_liveClass.viewerCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Controls
+              _buildControls(context),
+            ],
+          ),
+        ),
+        
+        // Chat Panel
+        if (_isChatVisible)
+          SizedBox(
+            width: 300,
+            child: _buildChatPanel(context),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildControls(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSizes.md),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: colorScheme.outlineVariant),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildControlButton(
+            context,
+            icon: Icons.mic_off_outlined,
+            label: 'Mute',
+            onTap: () {},
+          ),
+          _buildControlButton(
+            context,
+            icon: Icons.videocam_off_outlined,
+            label: 'Camera',
+            onTap: () {},
+          ),
+          _buildControlButton(
+            context,
+            icon: Icons.handshake_outlined,
+            label: 'Raise Hand',
+            onTap: () {},
+          ),
+          _buildControlButton(
+            context,
+            icon: Icons.emoji_emotions_outlined,
+            label: 'React',
+            onTap: () {},
+          ),
+          _buildControlButton(
+            context,
+            icon: Icons.call_end_rounded,
+            label: 'Leave',
+            onTap: () => Navigator.of(context).pop(),
+            isDestructive: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return GestureDetector(
       onTap: onTap,
@@ -339,21 +641,25 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: isActive ? AppColors.primary.withOpacity(0.2) : Colors.transparent,
+              color: isDestructive
+                  ? colorScheme.errorContainer
+                  : colorScheme.surfaceContainerHighest,
               shape: BoxShape.circle,
-              border: Border.all(
-                color: color.withOpacity(0.5),
-                width: 1,
-              ),
             ),
-            child: Icon(icon, color: color),
+            child: Icon(
+              icon,
+              color: isDestructive
+                  ? colorScheme.error
+                  : colorScheme.onSurface,
+            ),
           ),
           const SizedBox(height: AppSizes.xs),
           Text(
             label,
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
+            style: textTheme.labelSmall?.copyWith(
+              color: isDestructive
+                  ? colorScheme.error
+                  : colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -361,65 +667,74 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
     );
   }
 
-  Widget _buildChatArea() {
+  Widget _buildChatPanel(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
-      height: 250,
-      decoration: const BoxDecoration(
-        color: AppColors.darkSurface,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
         border: Border(
-          top: BorderSide(color: AppColors.border),
+          left: BorderSide(color: colorScheme.outlineVariant),
         ),
       ),
       child: Column(
         children: [
-          // Chat header
+          // Chat Header
           Container(
-            padding: const EdgeInsets.all(AppSizes.sm),
-            decoration: const BoxDecoration(
+            padding: const EdgeInsets.all(AppSizes.md),
+            decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: AppColors.border),
+                bottom: BorderSide(color: colorScheme.outlineVariant),
               ),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Icon(
+                  Icons.chat_bubble_outline,
+                  size: 20,
+                  color: colorScheme.onSurface,
+                ),
+                const SizedBox(width: AppSizes.sm),
+                Text(
                   'Live Chat',
-                  style: TextStyle(
-                    color: Colors.white,
+                  style: textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                const Spacer(),
                 IconButton(
                   onPressed: () {
-                    setState(() {
-                      _isChatVisible = false;
-                    });
+                    setState(() => _isChatVisible = false);
                   },
-                  icon: const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.white,
+                  icon: Icon(
+                    Icons.close,
+                    size: 20,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
           ),
+          
           // Messages
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(AppSizes.sm),
-              itemCount: _chatMessages.length,
+              itemCount: _messages.length,
               itemBuilder: (context, index) {
-                return _buildChatMessage(_chatMessages[index]);
+                return _buildChatMessage(context, _messages[index]);
               },
             ),
           ),
+          
           // Input
           Container(
             padding: const EdgeInsets.all(AppSizes.sm),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(color: AppColors.border),
+                top: BorderSide(color: colorScheme.outlineVariant),
               ),
             ),
             child: Row(
@@ -427,20 +742,16 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
                 Expanded(
                   child: TextField(
                     controller: _chatController,
-                    style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Send a message...',
-                      hintStyle: TextStyle(color: Colors.grey[400]),
-                      filled: true,
-                      fillColor: AppColors.darkBackground,
+                      hintText: 'Type a message...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                        borderSide: BorderSide.none,
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: AppSizes.md,
                         vertical: AppSizes.sm,
                       ),
+                      isDense: true,
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
@@ -448,7 +759,10 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
                 const SizedBox(width: AppSizes.sm),
                 IconButton(
                   onPressed: _sendMessage,
-                  icon: const Icon(Icons.send, color: AppColors.primary),
+                  icon: Icon(
+                    Icons.send_rounded,
+                    color: colorScheme.primary,
+                  ),
                 ),
               ],
             ),
@@ -458,208 +772,75 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
     );
   }
 
-  Widget _buildChatMessage(LiveChatMessage message) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSizes.sm),
+  Widget _buildChatMessage(BuildContext context, ChatMessage message) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSizes.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AvatarWidget(
-            name: message.userName,
-            size: 24,
-          ),
-          const SizedBox(width: AppSizes.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  message.userName,
-                  style: TextStyle(
-                    color: message.isMe ? AppColors.primaryLight : Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  message.message,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+          if (!message.isMe) ...[
+            AvatarWidget(
+              name: message.name,
+              size: AvatarSize.small,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTopOverlay() {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).viewPadding.top,
-          left: AppSizes.md,
-          right: AppSizes.md,
-          bottom: AppSizes.md,
-        ),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withOpacity(0.7),
-              Colors.transparent,
-            ],
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
+            const SizedBox(width: AppSizes.sm),
+          ],
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSizes.md,
+                vertical: AppSizes.sm,
+              ),
+              decoration: BoxDecoration(
+                color: message.isMe
+                    ? colorScheme.primaryContainer
+                    : colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _liveClass!.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
+                    message.name,
+                    style: textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: message.isMe
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    _liveClass!.teacher?.name ?? 'Unknown',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 12,
-                    ),
+                    message.message,
+                    style: textTheme.bodySmall,
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showParticipantsSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.darkSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSizes.radiusXl),
-        ),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(AppSizes.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSizes.lg),
-            const Text(
-              'Participants',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppSizes.md),
-            // Teacher
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const AvatarWidget(
-                name: 'Dr. Sarah Johnson',
-                size: 40,
-              ),
-              title: const Text(
-                'Dr. Sarah Johnson (Host)',
-                style: TextStyle(color: Colors.white),
-              ),
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.sm,
-                  vertical: AppSizes.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                ),
-                child: const Text(
-                  'Host',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 10,
-                  ),
-                ),
-              ),
-            ),
-            const Divider(color: AppColors.border),
-            // Participants list
-            Expanded(
-              child: ListView.builder(
-                itemCount: 10,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: AvatarWidget(
-                      name: 'Student ${index + 1}',
-                      size: 40,
-                    ),
-                    title: Text(
-                      'Student ${index + 1}',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    trailing: index == 2
-                        ? const Icon(
-                            Icons.back_hand,
-                            color: AppColors.warning,
-                            size: 20,
-                          )
-                        : null,
-                  );
-                },
-              ),
+          ),
+          if (message.isMe) ...[
+            const SizedBox(width: AppSizes.sm),
+            AvatarWidget(
+              name: message.name,
+              size: AvatarSize.small,
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// Live chat message model
-class LiveChatMessage {
-  const LiveChatMessage({
-    required this.id,
-    required this.userName,
-    required this.message,
-    required this.timestamp,
-    this.isMe = false,
-  });
-
-  final String id;
-  final String userName;
+class ChatMessage {
+  final String name;
   final String message;
-  final DateTime timestamp;
   final bool isMe;
+
+  ChatMessage({
+    required this.name,
+    required this.message,
+    required this.isMe,
+  });
 }

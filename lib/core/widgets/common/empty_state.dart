@@ -1,160 +1,213 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
 import '../../constants/app_sizes.dart';
-import '../../constants/app_strings.dart';
-import '../buttons/primary_button.dart';
 
-/// Empty state widget for displaying when no data is available
+/// Modern empty state widget with theme-aware styling
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
     this.icon,
+    this.image,
     this.title,
     this.message,
-    this.actionText,
+    this.actionLabel,
     this.onAction,
-    this.image,
+    this.size = EmptyStateSize.medium,
   });
 
   final IconData? icon;
+  final Widget? image;
   final String? title;
   final String? message;
-  final String? actionText;
+  final String? actionLabel;
   final VoidCallback? onAction;
-  final String? image;
+  final EmptyStateSize size;
+
+  double get _iconSize {
+    switch (size) {
+      case EmptyStateSize.small:
+        return 48;
+      case EmptyStateSize.medium:
+        return 64;
+      case EmptyStateSize.large:
+        return 96;
+    }
+  }
+
+  double get _titleFontSize {
+    switch (size) {
+      case EmptyStateSize.small:
+        return 16;
+      case EmptyStateSize.medium:
+        return 18;
+      case EmptyStateSize.large:
+        return 20;
+    }
+  }
+
+  double get _messageFontSize {
+    switch (size) {
+      case EmptyStateSize.small:
+        return 12;
+      case EmptyStateSize.medium:
+        return 14;
+      case EmptyStateSize.large:
+        return 16;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSizes.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (image != null)
-              Image.asset(
-                image!,
-                width: 150,
-                height: 150,
-              )
-            else if (icon != null)
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  size: 40,
-                  color: AppColors.primary,
-                ),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSizes.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icon or Image
+          if (icon != null)
+            Container(
+              padding: const EdgeInsets.all(AppSizes.lg),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                shape: BoxShape.circle,
               ),
-            const SizedBox(height: AppSizes.lg),
+              child: Icon(
+                icon,
+                size: _iconSize,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            )
+          else if (image != null)
+            image!,
+          
+          const SizedBox(height: AppSizes.lg),
+          
+          // Title
+          if (title != null)
             Text(
-              title ?? AppStrings.noResultsFound,
-              style: const TextStyle(
-                fontSize: 18,
+              title!,
+              style: textTheme.titleLarge?.copyWith(
+                fontSize: _titleFontSize,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
-            if (message != null) ...[
-              const SizedBox(height: AppSizes.sm),
-              Text(
-                message!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
+          
+          const SizedBox(height: AppSizes.sm),
+          
+          // Message
+          if (message != null)
+            Text(
+              message!,
+              style: textTheme.bodyMedium?.copyWith(
+                fontSize: _messageFontSize,
+                color: colorScheme.onSurfaceVariant,
+                height: 1.5,
               ),
-            ],
-            if (actionText != null && onAction != null) ...[
-              const SizedBox(height: AppSizes.lg),
-              PrimaryButton(
-                text: actionText!,
-                onPressed: onAction,
-                width: 200,
-              ),
-            ],
+              textAlign: TextAlign.center,
+            ),
+          
+          // Action Button
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: AppSizes.lg),
+            FilledButton(
+              onPressed: onAction,
+              child: Text(actionLabel!),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// Error state widget for displaying error messages
+/// Error state widget
 class ErrorState extends StatelessWidget {
   const ErrorState({
     super.key,
-    this.title,
-    this.message,
+    this.title = 'Something went wrong',
+    this.message = 'Please try again later',
+    this.retryLabel = 'Retry',
     this.onRetry,
-    this.retryText,
   });
 
-  final String? title;
-  final String? message;
+  final String title;
+  final String message;
+  final String retryLabel;
   final VoidCallback? onRetry;
-  final String? retryText;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSizes.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.error_outline,
-                size: 40,
-                color: AppColors.error,
-              ),
-            ),
-            const SizedBox(height: AppSizes.lg),
-            Text(
-              title ?? AppStrings.somethingWentWrong,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (message != null) ...[
-              const SizedBox(height: AppSizes.sm),
-              Text(
-                message!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-            if (onRetry != null) ...[
-              const SizedBox(height: AppSizes.lg),
-              PrimaryButton(
-                text: retryText ?? AppStrings.tryAgain,
-                onPressed: onRetry,
-                width: 200,
-              ),
-            ],
-          ],
-        ),
-      ),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return EmptyState(
+      icon: Icons.error_outline_rounded,
+      title: title,
+      message: message,
+      actionLabel: onRetry != null ? retryLabel : null,
+      onAction: onRetry,
+      size: EmptyStateSize.medium,
     );
   }
 }
+
+/// No internet state widget
+class NoInternetState extends StatelessWidget {
+  const NoInternetState({
+    super.key,
+    this.retryLabel = 'Retry',
+    this.onRetry,
+  });
+
+  final String retryLabel;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return EmptyState(
+      icon: Icons.wifi_off_rounded,
+      title: 'No Internet Connection',
+      message: 'Please check your internet connection and try again.',
+      actionLabel: onRetry != null ? retryLabel : null,
+      onAction: onRetry,
+      size: EmptyStateSize.medium,
+    );
+  }
+}
+
+/// No data state widget
+class NoDataState extends StatelessWidget {
+  const NoDataState({
+    super.key,
+    this.title = 'No Data Found',
+    this.message,
+    this.actionLabel,
+    this.onAction,
+    this.icon = Icons.inbox_outlined,
+  });
+
+  final String title;
+  final String? message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return EmptyState(
+      icon: icon,
+      title: title,
+      message: message ?? 'There is no data to display.',
+      actionLabel: actionLabel,
+      onAction: onAction,
+      size: EmptyStateSize.medium,
+    );
+  }
+}
+
+enum EmptyStateSize { small, medium, large }

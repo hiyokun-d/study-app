@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
-import '../../../core/widgets/buttons/outline_button.dart';
-import '../../../routes/app_routes.dart';
 
-/// Onboarding screen with 3-page introduction
+/// Modern onboarding screen with page indicators
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -18,45 +15,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<OnboardingPage> _pages = const [
+  final List<OnboardingPage> _pages = [
     OnboardingPage(
-      icon: Icons.school,
-      title: AppStrings.onboardingTitle1,
-      subtitle: AppStrings.onboardingSubtitle1,
-      color: AppColors.primary,
+      icon: Icons.menu_book_rounded,
+      title: 'Learn Anything',
+      subtitle: 'Access thousands of courses from expert freelance teachers',
+      gradient: const LinearGradient(
+        colors: [Color(0xFF6C63FF), Color(0xFF9B94FF)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
     ),
     OnboardingPage(
-      icon: Icons.person_search,
-      title: AppStrings.onboardingTitle2,
-      subtitle: AppStrings.onboardingSubtitle2,
-      color: AppColors.secondary,
+      icon: Icons.person_search_rounded,
+      title: 'Choose Your Tutor',
+      subtitle: 'Browse profiles, reviews, and find the teacher that fits your style',
+      gradient: const LinearGradient(
+        colors: [Color(0xFFFF6B6B), Color(0xFFFF8A8A)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
     ),
     OnboardingPage(
-      icon: Icons.schedule,
-      title: AppStrings.onboardingTitle3,
-      subtitle: AppStrings.onboardingSubtitle3,
-      color: AppColors.success,
+      icon: Icons.schedule_rounded,
+      title: 'Learn at Your Pace',
+      subtitle: 'Live classes, recorded sessions, or 1-on-1 tutoring - you decide',
+      gradient: const LinearGradient(
+        colors: [Color(0xFF4ECDC4), Color(0xFF7EDDD7)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
     ),
   ];
-
-  void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    } else {
-      _goToLogin();
-    }
-  }
-
-  void _skip() {
-    _goToLogin();
-  }
-
-  void _goToLogin() {
-    Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-  }
 
   @override
   void dispose() {
@@ -64,38 +54,59 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  void _nextPage() {
+    if (_currentPage < _pages.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _navigateToNext();
+    }
+  }
+
+  void _skip() {
+    _navigateToNext();
+  }
+
+  void _navigateToNext() {
+    Navigator.of(context).pushReplacementNamed('/role-selection');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
+            // Skip Button
             Align(
               alignment: Alignment.topRight,
               child: Padding(
                 padding: const EdgeInsets.all(AppSizes.md),
                 child: TextButton(
                   onPressed: _skip,
-                  child: const Text(
-                    AppStrings.skip,
+                  child: Text(
+                    'Skip',
                     style: TextStyle(
-                      fontSize: 16,
+                      color: colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
               ),
             ),
-            // Page view
+            
+            // Page View
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
+                  setState(() => _currentPage = index);
                 },
                 itemCount: _pages.length,
                 itemBuilder: (context, index) {
@@ -103,33 +114,50 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
-            // Page indicators
+            
+            // Page Indicators
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSizes.lg),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _pages.length,
-                  (index) => _buildPageIndicator(index),
-                ),
+                children: List.generate(_pages.length, (index) {
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: _currentPage == index ? 24 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _currentPage == index
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                    ),
+                  );
+                }),
               ),
             ),
-            // Buttons
+            
+            // Action Buttons
             Padding(
               padding: const EdgeInsets.all(AppSizes.lg),
               child: Column(
                 children: [
                   PrimaryButton(
                     text: _currentPage == _pages.length - 1
-                        ? AppStrings.getStarted
-                        : AppStrings.next,
+                        ? 'Get Started'
+                        : 'Next',
                     onPressed: _nextPage,
                   ),
-                  if (_currentPage == _pages.length - 1) ...[
+                  if (_currentPage < _pages.length - 1) ...[
                     const SizedBox(height: AppSizes.md),
-                    OutlineButton(
-                      text: AppStrings.signIn,
-                      onPressed: _goToLogin,
+                    TextButton(
+                      onPressed: _skip,
+                      child: Text(
+                        'Skip for now',
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -142,44 +170,56 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPage(OnboardingPage page) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.all(AppSizes.xl),
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icon container
+          // Icon Container
           Container(
-            width: 150,
-            height: 150,
+            width: 160,
+            height: 160,
             decoration: BoxDecoration(
-              color: page.color.withOpacity(0.1),
+              gradient: page.gradient,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: (page.gradient.colors.first).withOpacity(0.3),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
+                ),
+              ],
             ),
             child: Icon(
               page.icon,
-              size: 80,
-              color: page.color,
+              size: 72,
+              color: Colors.white,
             ),
           ),
+          
           const SizedBox(height: AppSizes.xxl),
+          
           // Title
           Text(
             page.title,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+            style: theme.textTheme.displaySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
           ),
+          
           const SizedBox(height: AppSizes.md),
+          
           // Subtitle
           Text(
             page.subtitle,
-            style: const TextStyle(
-              fontSize: 16,
-              color: AppColors.textSecondary,
-              height: 1.5,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.6,
             ),
             textAlign: TextAlign.center,
           ),
@@ -187,32 +227,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
   }
-
-  Widget _buildPageIndicator(int index) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: _currentPage == index ? 24 : 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: _currentPage == index ? AppColors.primary : AppColors.border,
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
-  }
 }
 
-/// Data class for onboarding page content
 class OnboardingPage {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final LinearGradient gradient;
+
   const OnboardingPage({
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.color,
+    required this.gradient,
   });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
 }

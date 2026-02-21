@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../constants/app_colors.dart';
 import '../../constants/app_sizes.dart';
 
-/// Custom text input widget with validation and styling
+/// Custom text input widget with validation and modern styling
 class TextInput extends StatelessWidget {
   const TextInput({
     super.key,
@@ -34,6 +33,8 @@ class TextInput extends StatelessWidget {
     this.fillColor,
     this.borderColor,
     this.validator,
+    this.size = InputSize.medium,
+    this.showBorder = true,
   });
 
   final TextEditingController? controller;
@@ -63,9 +64,38 @@ class TextInput extends StatelessWidget {
   final Color? fillColor;
   final Color? borderColor;
   final String? Function(String?)? validator;
+  final InputSize size;
+  final bool showBorder;
+
+  double get _inputHeight {
+    switch (size) {
+      case InputSize.small:
+        return AppSizes.inputHeightSm;
+      case InputSize.medium:
+        return AppSizes.inputHeight;
+    }
+  }
+
+  double get _contentPadding {
+    switch (size) {
+      case InputSize.small:
+        return AppSizes.sm;
+      case InputSize.medium:
+        return AppSizes.md;
+    }
+  }
+
+  double get _fontSize => size == InputSize.small ? 14 : 16;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    
+    final effectiveFillColor = fillColor ?? colorScheme.surface;
+    final effectiveBorderColor = borderColor ?? colorScheme.outline;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -73,10 +103,10 @@ class TextInput extends StatelessWidget {
         if (label != null) ...[
           Text(
             label!,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
+            style: textTheme.titleSmall?.copyWith(
+              color: enabled 
+                  ? colorScheme.onSurface
+                  : colorScheme.onSurface.withOpacity(0.5),
             ),
           ),
           const SizedBox(height: AppSizes.xs),
@@ -100,62 +130,98 @@ class TextInput extends StatelessWidget {
           onFieldSubmitted: onSubmitted,
           onTap: onTap,
           validator: validator,
-          style: const TextStyle(
-            fontSize: 16,
-            color: AppColors.textPrimary,
+          style: textTheme.bodyLarge?.copyWith(
+            fontSize: _fontSize,
+            color: enabled 
+                ? colorScheme.onSurface
+                : colorScheme.onSurface.withOpacity(0.5),
           ),
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,
             helperText: helperText,
             filled: true,
-            fillColor: fillColor ?? AppColors.surface,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSizes.md,
-              vertical: AppSizes.md,
+            fillColor: effectiveFillColor,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: _contentPadding,
+              vertical: _contentPadding,
             ),
             prefixIcon: prefixIcon != null
-                ? Icon(prefixIcon, size: 20)
+                ? Icon(
+                    prefixIcon,
+                    size: _fontSize + 4,
+                    color: enabled 
+                        ? colorScheme.onSurfaceVariant
+                        : colorScheme.onSurface.withOpacity(0.38),
+                  )
                 : null,
             suffixIcon: suffixIcon != null
                 ? IconButton(
-                    icon: Icon(suffixIcon, size: 20),
+                    icon: Icon(
+                      suffixIcon,
+                      size: _fontSize + 4,
+                      color: enabled 
+                          ? colorScheme.onSurfaceVariant
+                          : colorScheme.onSurface.withOpacity(0.38),
+                    ),
                     onPressed: onSuffixIconPressed,
                   )
                 : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              borderSide: BorderSide(
-                color: borderColor ?? AppColors.border,
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              borderSide: BorderSide(
-                color: borderColor ?? AppColors.border,
-              ),
-            ),
+            border: showBorder
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: effectiveBorderColor),
+                  )
+                : OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide.none,
+                  ),
+            enabledBorder: showBorder
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: effectiveBorderColor),
+                  )
+                : OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide.none,
+                  ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              borderSide: const BorderSide(
-                color: AppColors.primary,
+              borderSide: BorderSide(
+                color: colorScheme.primary,
                 width: 2,
               ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              borderSide: const BorderSide(color: AppColors.error),
+              borderSide: BorderSide(color: colorScheme.error),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              borderSide: const BorderSide(
-                color: AppColors.error,
+              borderSide: BorderSide(
+                color: colorScheme.error,
                 width: 2,
               ),
             ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              borderSide: const BorderSide(color: AppColors.border),
+            disabledBorder: showBorder
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(
+                      color: colorScheme.onSurface.withOpacity(0.12),
+                    ),
+                  )
+                : OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide.none,
+                  ),
+            hintStyle: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+            ),
+            errorStyle: textTheme.bodySmall?.copyWith(
+              color: colorScheme.error,
+            ),
+            helperStyle: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -163,3 +229,5 @@ class TextInput extends StatelessWidget {
     );
   }
 }
+
+enum InputSize { small, medium }

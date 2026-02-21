@@ -1,27 +1,36 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
 import '../../constants/app_sizes.dart';
 
-/// Search input widget with optional filter button
+/// Modern search input widget with theme-aware styling
 class SearchInput extends StatefulWidget {
   const SearchInput({
     super.key,
-    this.controller,
     this.hint = 'Search...',
+    this.controller,
     this.onChanged,
     this.onSubmitted,
-    this.onFilterTap,
-    this.showFilter = false,
+    this.onClear,
+    this.focusNode,
     this.autofocus = false,
+    this.showFilter = false,
+    this.onFilterTap,
+    this.fillColor,
+    this.size = SearchInputSize.medium,
+    this.showBorder = true,
   });
 
-  final TextEditingController? controller;
   final String hint;
+  final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
-  final VoidCallback? onFilterTap;
-  final bool showFilter;
+  final VoidCallback? onClear;
+  final FocusNode? focusNode;
   final bool autofocus;
+  final bool showFilter;
+  final VoidCallback? onFilterTap;
+  final Color? fillColor;
+  final SearchInputSize size;
+  final bool showBorder;
 
   @override
   State<SearchInput> createState() => _SearchInputState();
@@ -48,90 +57,140 @@ class _SearchInputState extends State<SearchInput> {
   }
 
   void _onTextChanged() {
-    setState(() {
-      _hasText = _controller.text.isNotEmpty;
-    });
+    final hasText = _controller.text.isNotEmpty;
+    if (hasText != _hasText) {
+      setState(() => _hasText = hasText);
+    }
   }
+
+  void _clearText() {
+    _controller.clear();
+    widget.onClear?.call();
+    widget.onChanged?.call('');
+  }
+
+  double get _inputHeight {
+    switch (widget.size) {
+      case SearchInputSize.small:
+        return 40;
+      case SearchInputSize.medium:
+        return 48;
+      case SearchInputSize.large:
+        return 56;
+    }
+  }
+
+  double get _fontSize => widget.size == SearchInputSize.small ? 14 : 16;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _controller,
-            autofocus: widget.autofocus,
-            onChanged: widget.onChanged,
-            onSubmitted: widget.onSubmitted,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: widget.hint,
-              filled: true,
-              fillColor: AppColors.surface,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSizes.md,
-                vertical: AppSizes.sm,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    
+    final effectiveFillColor = widget.fillColor ?? 
+        colorScheme.surfaceContainerHighest.withOpacity(0.5);
+
+    return Container(
+      height: _inputHeight,
+      decoration: BoxDecoration(
+        color: effectiveFillColor,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        border: widget.showBorder
+            ? Border.all(
+                color: colorScheme.outlineVariant,
+                width: 1,
+              )
+            : null,
+      ),
+      child: Row(
+        children: [
+          // Search Icon
+          Padding(
+            padding: const EdgeInsets.only(left: AppSizes.md),
+            child: Icon(
+              Icons.search_rounded,
+              size: _fontSize + 6,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          
+          // Text Field
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              focusNode: widget.focusNode,
+              autofocus: widget.autofocus,
+              onChanged: widget.onChanged,
+              onSubmitted: widget.onSubmitted,
+              textInputAction: TextInputAction.search,
+              style: textTheme.bodyLarge?.copyWith(
+                fontSize: _fontSize,
+                color: colorScheme.onSurface,
               ),
-              prefixIcon: const Icon(
-                Icons.search,
-                size: 20,
-                color: AppColors.textSecondary,
-              ),
-              suffixIcon: _hasText
-                  ? IconButton(
-                      icon: const Icon(
-                        Icons.clear,
-                        size: 20,
-                        color: AppColors.textSecondary,
-                      ),
-                      onPressed: () {
-                        _controller.clear();
-                        widget.onChanged?.call('');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                borderSide: const BorderSide(color: AppColors.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                borderSide: const BorderSide(color: AppColors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                borderSide: const BorderSide(
-                  color: AppColors.primary,
-                  width: 2,
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                hintStyle: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.sm,
+                  vertical: AppSizes.sm,
+                ),
+                isDense: true,
               ),
             ),
           ),
-        ),
-        if (widget.showFilter) ...[
-          const SizedBox(width: AppSizes.sm),
-          Material(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-            child: InkWell(
-              onTap: widget.onFilterTap,
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          
+          // Clear Button
+          if (_hasText)
+            AnimatedOpacity(
+              opacity: _hasText ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 150),
+              child: IconButton(
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: _fontSize + 2,
+                  color: colorScheme.onSurfaceVariant,
                 ),
-                child: const Icon(
-                  Icons.tune,
-                  color: AppColors.textSecondary,
+                onPressed: _clearText,
+                padding: const EdgeInsets.all(AppSizes.sm),
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
                 ),
               ),
             ),
-          ),
+          
+          // Filter Button
+          if (widget.showFilter)
+            Container(
+              margin: const EdgeInsets.only(right: AppSizes.xs),
+              child: IconButton(
+                icon: Icon(
+                  Icons.tune_rounded,
+                  size: _fontSize + 4,
+                  color: colorScheme.primary,
+                ),
+                onPressed: widget.onFilterTap,
+                padding: const EdgeInsets.all(AppSizes.sm),
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: colorScheme.primaryContainer.withOpacity(0.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                  ),
+                ),
+              ),
+            ),
         ],
-      ],
+      ),
     );
   }
 }
+
+enum SearchInputSize { small, medium, large }

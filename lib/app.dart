@@ -1,66 +1,80 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/screens/splash_screen.dart';
-import 'features/auth/screens/onboarding_screen.dart';
-import 'features/auth/screens/login_screen.dart';
-import 'features/auth/screens/register_screen.dart';
-import 'features/auth/screens/role_selection_screen.dart';
-import 'features/student/screens/student_dashboard.dart';
-import 'features/student/screens/course_detail_screen.dart';
-import 'features/student/screens/live_class_screen.dart';
-import 'features/teacher/screens/teacher_dashboard.dart';
-import 'features/chat/screens/chat_detail_screen.dart';
-import 'features/subscription/screens/subscription_plans_screen.dart';
-import 'features/subscription/screens/payment_screen.dart';
-import 'features/subscription/screens/payment_success_screen.dart';
 import 'routes/app_routes.dart';
 
-/// Main application widget
-class StudyApp extends StatelessWidget {
+/// Main application widget with theme support
+class StudyApp extends StatefulWidget {
   const StudyApp({super.key});
+
+  @override
+  State<StudyApp> createState() => _StudyAppState();
+}
+
+class _StudyAppState extends State<StudyApp> {
+  ThemeMode _themeMode = ThemeMode.system;
+
+  void _setThemeMode(ThemeMode mode) {
+    setState(() {
+      _themeMode = mode;
+    });
+  }
+
+  void _toggleTheme() {
+    setState(() {
+      _themeMode = _themeMode == ThemeMode.light
+          ? ThemeMode.dark
+          : ThemeMode.light;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Study App',
       debugShowCheckedModeBanner: false,
+      
+      // Theme Configuration
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: _themeMode,
+      
+      // Routes
       initialRoute: AppRoutes.splash,
-      routes: {
-        // Auth routes
-        AppRoutes.splash: (context) => const SplashScreen(),
-        AppRoutes.onboarding: (context) => const OnboardingScreen(),
-        AppRoutes.login: (context) => const LoginScreen(),
-        AppRoutes.register: (context) => const RegisterScreen(),
-        AppRoutes.roleSelection: (context) => const RoleSelectionScreen(),
-        
-        // Student routes
-        AppRoutes.studentDashboard: (context) => const StudentDashboard(),
-        AppRoutes.courseDetail: (context) => const CourseDetailScreen(),
-        AppRoutes.liveClass: (context) => const LiveClassScreen(),
-        
-        // Teacher routes
-        AppRoutes.teacherDashboard: (context) => const TeacherDashboard(),
-        
-        // Chat routes
-        AppRoutes.chatDetail: (context) => const ChatDetailScreen(),
-        
-        // Subscription routes
-        AppRoutes.subscriptionPlans: (context) => const SubscriptionPlansScreen(),
-        AppRoutes.payment: (context) => const PaymentScreen(),
-        AppRoutes.paymentSuccess: (context) => const PaymentSuccessScreen(),
-      },
-      onGenerateRoute: (settings) {
-        // Handle routes with arguments here
-        switch (settings.name) {
-          default:
-            return MaterialPageRoute(
-              builder: (context) => const SplashScreen(),
-            );
-        }
+      onGenerateRoute: AppRoutes.generateRoute,
+      
+      // Builder for global theme access
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.noScaling,
+          ),
+          child: child!,
+        );
       },
     );
+  }
+}
+
+/// Inherited widget for theme management
+class ThemeInheritedWidget extends InheritedWidget {
+  const ThemeInheritedWidget({
+    super.key,
+    required this.themeMode,
+    required this.setThemeMode,
+    required this.toggleTheme,
+    required super.child,
+  });
+
+  final ThemeMode themeMode;
+  final void Function(ThemeMode) setThemeMode;
+  final VoidCallback toggleTheme;
+
+  static ThemeInheritedWidget? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<ThemeInheritedWidget>();
+  }
+
+  @override
+  bool updateShouldNotify(ThemeInheritedWidget oldWidget) {
+    return themeMode != oldWidget.themeMode;
   }
 }

@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/common/avatar_widget.dart';
 import '../../../data/dummy_data.dart';
 import '../../../models/course_model.dart';
-import '../../../routes/app_routes.dart';
 
-/// Course detail screen showing full course information
+/// Modern course detail screen with theme-aware styling
 class CourseDetailScreen extends StatefulWidget {
-  const CourseDetailScreen({super.key, this.courseId});
+  const CourseDetailScreen({
+    super.key,
+    required this.courseId,
+  });
 
-  final String? courseId;
+  final String courseId;
 
   @override
   State<CourseDetailScreen> createState() => _CourseDetailScreenState();
@@ -21,26 +22,17 @@ class CourseDetailScreen extends StatefulWidget {
 class _CourseDetailScreenState extends State<CourseDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  CourseModel? _course;
-  bool _isFavorite = false;
+  late CourseModel _course;
+  bool _isBookmarked = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _loadCourse();
-  }
-
-  void _loadCourse() {
-    // For demo, load first course
-    if (widget.courseId != null) {
-      _course = DummyData.courses.firstWhere(
-        (c) => c.id == widget.courseId,
-        orElse: () => DummyData.courses.first,
-      );
-    } else {
-      _course = DummyData.courses.first;
-    }
+    _tabController = TabController(length: 4, vsync: this);
+    _course = DummyData.courses.firstWhere(
+      (c) => c.id == widget.courseId,
+      orElse: () => DummyData.courses.first,
+    );
   }
 
   @override
@@ -49,82 +41,80 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     super.dispose();
   }
 
-  void _enrollCourse() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _EnrollmentBottomSheet(course: _course!),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_course == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
-            _buildSliverAppBar(),
+            _buildSliverAppBar(context),
           ];
         },
         body: Column(
           children: [
-            _buildTabBar(),
+            _buildTabBar(context),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _OverviewTab(course: _course!),
-                  _CurriculumTab(course: _course!),
-                  _ReviewsTab(course: _course!),
+                  _OverviewTab(course: _course),
+                  _CurriculumTab(course: _course),
+                  _ReviewsTab(course: _course),
+                  _TeacherTab(course: _course),
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomBar(),
+      bottomNavigationBar: _buildBottomBar(context),
     );
   }
 
-  Widget _buildSliverAppBar() {
+  Widget _buildSliverAppBar(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return SliverAppBar(
-      expandedHeight: 250,
+      expandedHeight: 200,
       pinned: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: colorScheme.surface,
+      foregroundColor: colorScheme.onSurface,
       leading: IconButton(
         onPressed: () => Navigator.of(context).pop(),
         icon: Container(
           padding: const EdgeInsets.all(AppSizes.xs),
           decoration: BoxDecoration(
-            color: Colors.black26,
-            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+            color: colorScheme.surface.withOpacity(0.8),
+            shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.arrow_back, color: Colors.white),
+          child: Icon(
+            Icons.arrow_back_ios_new,
+            size: 18,
+            color: colorScheme.onSurface,
+          ),
         ),
       ),
       actions: [
         IconButton(
           onPressed: () {
-            setState(() {
-              _isFavorite = !_isFavorite;
-            });
+            setState(() => _isBookmarked = !_isBookmarked);
           },
           icon: Container(
             padding: const EdgeInsets.all(AppSizes.xs),
             decoration: BoxDecoration(
-              color: Colors.black26,
-              borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+              color: colorScheme.surface.withOpacity(0.8),
+              shape: BoxShape.circle,
             ),
             child: Icon(
-              _isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: _isFavorite ? AppColors.error : Colors.white,
+              _isBookmarked
+                  ? Icons.bookmark_rounded
+                  : Icons.bookmark_border_rounded,
+              size: 18,
+              color: _isBookmarked
+                  ? colorScheme.primary
+                  : colorScheme.onSurface,
             ),
           ),
         ),
@@ -133,21 +123,34 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           icon: Container(
             padding: const EdgeInsets.all(AppSizes.xs),
             decoration: BoxDecoration(
-              color: Colors.black26,
-              borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+              color: colorScheme.surface.withOpacity(0.8),
+              shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.share, color: Colors.white),
+            child: Icon(
+              Icons.share_rounded,
+              size: 18,
+              color: colorScheme.onSurface,
+            ),
           ),
         ),
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          color: AppColors.primary.withOpacity(0.1),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                colorScheme.primaryContainer,
+                colorScheme.primaryContainer.withOpacity(0.3),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
           child: Center(
             child: Icon(
-              _getCategoryIcon(_course!.category),
-              size: 80,
-              color: AppColors.primary,
+              Icons.play_circle_outline,
+              size: 64,
+              color: colorScheme.primary,
             ),
           ),
         ),
@@ -155,70 +158,93 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
-      color: AppColors.surface,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
+      ),
       child: TabBar(
         controller: _tabController,
-        labelColor: AppColors.primary,
-        unselectedLabelColor: AppColors.textSecondary,
-        indicatorColor: AppColors.primary,
-        indicatorWeight: 3,
+        labelColor: colorScheme.primary,
+        unselectedLabelColor: colorScheme.onSurfaceVariant,
+        labelStyle: textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+        indicatorColor: colorScheme.primary,
+        indicatorWeight: 2,
+        indicatorSize: TabBarIndicatorSize.label,
         tabs: const [
-          Tab(text: AppStrings.overview),
-          Tab(text: AppStrings.curriculum),
-          Tab(text: AppStrings.reviews),
+          Tab(text: 'Overview'),
+          Tab(text: 'Curriculum'),
+          Tab(text: 'Reviews'),
+          Tab(text: 'Teacher'),
         ],
       ),
     );
   }
 
-  Widget _buildBottomBar() {
+  Widget _buildBottomBar(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
-      padding: const EdgeInsets.all(AppSizes.md),
+      padding: EdgeInsets.fromLTRB(
+        AppSizes.md,
+        AppSizes.md,
+        AppSizes.md,
+        MediaQuery.of(context).padding.bottom + AppSizes.md,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: colorScheme.shadow.withOpacity(0.05),
+            blurRadius: 20,
             offset: const Offset(0, -5),
           ),
         ],
       ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppStrings.price,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
+      child: Row(
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Price',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
-                Text(
-                  _course!.formattedPrice,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: AppSizes.md),
-            Expanded(
-              child: PrimaryButton(
-                text: _course!.isEnrolled ? AppStrings.continueLearning : AppStrings.enrollNow,
-                onPressed: _course!.isEnrolled ? () {} : _enrollCourse,
               ),
+              Text(
+                '\$${_course.price.toStringAsFixed(0)}',
+                style: textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: AppSizes.lg),
+          Expanded(
+            child: PrimaryButton(
+              text: AppStrings.enrollNow,
+              onPressed: () {},
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -232,6 +258,9 @@ class _OverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSizes.md),
       child: Column(
@@ -240,256 +269,230 @@ class _OverviewTab extends StatelessWidget {
           // Title
           Text(
             course.title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+            style: textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurface,
             ),
           ),
+          
+          const SizedBox(height: AppSizes.sm),
+          
+          // Teacher Row
+          Row(
+            children: [
+              AvatarWidget(
+                name: course.teacher?.name ?? 'Teacher',
+                size: AvatarSize.small,
+              ),
+              const SizedBox(width: AppSizes.sm),
+              Text(
+                course.teacher?.name ?? 'Teacher',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          
           const SizedBox(height: AppSizes.md),
-          // Teacher card
-          _buildTeacherCard(context),
+          
+          // Stats Row
+          _buildStatsRow(context),
+          
           const SizedBox(height: AppSizes.lg),
-          // Stats
-          _buildStats(),
-          const SizedBox(height: AppSizes.lg),
+          
           // Description
-          const Text(
-            'About This Course',
-            style: TextStyle(
-              fontSize: 18,
+          Text(
+            'About this course',
+            style: textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: AppSizes.sm),
           Text(
             course.description,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
               height: 1.6,
             ),
           ),
+          
           const SizedBox(height: AppSizes.lg),
-          // What you will learn
-          if (course.whatYouWillLearn.isNotEmpty) ...[
-            const Text(
-              AppStrings.whatYouWillLearn,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
+          
+          // What you'll learn
+          Text(
+            'What you\'ll learn',
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: AppSizes.sm),
-            ...course.whatYouWillLearn.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSizes.sm),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      child: const Icon(
-                        Icons.check_circle,
-                        color: AppColors.success,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: AppSizes.sm),
-                    Expanded(
-                      child: Text(
-                        item,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
+          const SizedBox(height: AppSizes.sm),
+          ..._buildLearningPoints(context),
+          
           const SizedBox(height: AppSizes.lg),
+          
           // Requirements
-          if (course.requirements.isNotEmpty) ...[
-            const Text(
-              AppStrings.requirements,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
+          Text(
+            'Requirements',
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: AppSizes.sm),
-            ...course.requirements.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSizes.sm),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      child: const Icon(
-                        Icons.circle,
-                        color: AppColors.textSecondary,
-                        size: 8,
-                      ),
-                    ),
-                    const SizedBox(width: AppSizes.sm),
-                    Expanded(
-                      child: Text(
-                        item,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: AppSizes.xl),
+          ),
+          const SizedBox(height: AppSizes.sm),
+          ..._buildRequirements(context),
         ],
       ),
     );
   }
 
-  Widget _buildTeacherCard(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to teacher profile
-      },
-      child: Container(
-        padding: const EdgeInsets.all(AppSizes.md),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-        ),
-        child: Row(
-          children: [
-            AvatarWidget(
-              imageUrl: course.teacher?.avatar,
-              name: course.teacher?.name ?? 'Unknown',
-              size: 48,
-            ),
-            const SizedBox(width: AppSizes.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    course.teacher?.name ?? 'Unknown',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.xs),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star,
-                        size: 14,
-                        color: AppColors.warning,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '4.9',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(width: AppSizes.md),
-                      const Icon(
-                        Icons.people,
-                        size: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '3.2k students',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.md,
-                  vertical: AppSizes.sm,
-                ),
-                side: const BorderSide(color: AppColors.primary),
-              ),
-              child: const Text(AppStrings.subscribe),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildStatsRow(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
-  Widget _buildStats() {
-    return Row(
-      children: [
-        _buildStatItem(Icons.star, AppColors.warning, course.rating.toString(),
-            '${course.totalRatings} reviews'),
-        const SizedBox(width: AppSizes.md),
-        _buildStatItem(Icons.people, AppColors.primary,
-            course.totalStudents.toString(), 'students'),
-        const SizedBox(width: AppSizes.md),
-        _buildStatItem(Icons.schedule, AppColors.textSecondary,
-            course.formattedDuration, 'duration'),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(AppSizes.md),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem(
+            context,
+            icon: Icons.star_rounded,
+            label: 'Rating',
+            value: course.rating.toStringAsFixed(1),
+            color: const Color(0xFFFFB800),
+          ),
+          _buildStatItem(
+            context,
+            icon: Icons.people_outline,
+            label: 'Students',
+            value: '${course.totalStudents}',
+          ),
+          _buildStatItem(
+            context,
+            icon: Icons.schedule_outlined,
+            label: 'Duration',
+            value: course.formattedDuration,
+          ),
+          _buildStatItem(
+            context,
+            icon: Icons.update_outlined,
+            label: 'Updated',
+            value: 'Recently',
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildStatItem(
-      IconData icon, Color color, String value, String label) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(AppSizes.md),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? color,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: color ?? colorScheme.primary,
         ),
-        child: Column(
+        const SizedBox(height: AppSizes.xs),
+        Text(
+          value,
+          style: textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          label,
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildLearningPoints(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final points = [
+      'Understand the fundamentals of the subject',
+      'Apply concepts to real-world scenarios',
+      'Build practical projects from scratch',
+      'Master advanced techniques',
+    ];
+
+    return points.map((point) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppSizes.sm),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: AppSizes.xs),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+            Icon(
+              Icons.check_circle_rounded,
+              size: 20,
+              color: colorScheme.primary,
             ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: AppColors.textSecondary,
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: Text(
+                point,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
-      ),
-    );
+      );
+    }).toList();
+  }
+
+  List<Widget> _buildRequirements(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final requirements = [
+      'No prior experience required',
+      'A computer with internet access',
+      'Willingness to learn',
+    ];
+
+    return requirements.map((req) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppSizes.sm),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.arrow_right_rounded,
+              size: 20,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: AppSizes.xs),
+            Expanded(
+              child: Text(
+                req,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
   }
 }
 
@@ -501,6 +504,35 @@ class _CurriculumTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    // Mock curriculum data
+    final sections = [
+      {
+        'title': 'Introduction',
+        'lessons': [
+          {'title': 'Welcome to the course', 'duration': '5:00', 'preview': true},
+          {'title': 'What you will learn', 'duration': '3:00', 'preview': true},
+        ],
+      },
+      {
+        'title': 'Getting Started',
+        'lessons': [
+          {'title': 'Setting up your environment', 'duration': '10:00', 'preview': false},
+          {'title': 'Basic concepts', 'duration': '15:00', 'preview': false},
+          {'title': 'Your first project', 'duration': '20:00', 'preview': false},
+        ],
+      },
+      {
+        'title': 'Advanced Topics',
+        'lessons': [
+          {'title': 'Advanced techniques', 'duration': '25:00', 'preview': false},
+          {'title': 'Best practices', 'duration': '15:00', 'preview': false},
+        ],
+      },
+    ];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSizes.md),
       child: Column(
@@ -510,156 +542,171 @@ class _CurriculumTab extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSizes.md),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(AppSizes.radiusMd),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildSummaryItem(
-                    '${course.totalLessons}', AppStrings.lessons),
-                Container(
-                  width: 1,
-                  height: 30,
-                  color: AppColors.border,
+                Text(
+                  '${sections.length} Sections',
+                  style: textTheme.titleSmall,
                 ),
-                _buildSummaryItem(course.formattedDuration, 'Total'),
-                Container(
-                  width: 1,
-                  height: 30,
-                  color: AppColors.border,
+                Text(
+                  '${sections.fold(0, (sum, s) => sum + (s['lessons'] as List).length)} Lessons',
+                  style: textTheme.titleSmall,
                 ),
-                _buildSummaryItem('2', 'Sections'),
+                Text(
+                  '2h 30m',
+                  style: textTheme.titleSmall,
+                ),
               ],
             ),
           ),
+          
           const SizedBox(height: AppSizes.lg),
+          
           // Sections
-          if (course.sections.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSizes.xl),
-                child: Text('Curriculum will be available soon'),
-              ),
-            )
-          else
-            ...course.sections.map((section) {
-              return _buildSection(section);
-            }),
+          ...sections.asMap().entries.map((entry) {
+            final index = entry.key;
+            final section = entry.value;
+            return _buildSection(
+              context,
+              sectionNumber: index + 1,
+              title: section['title'] as String,
+              lessons: section['lessons'] as List<Map<String, dynamic>>,
+            );
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryItem(String value, String label) {
+  Widget _buildSection(
+    BuildContext context, {
+    required int sectionNumber,
+    required String title,
+    required List<Map<String, dynamic>> lessons,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary,
+        Container(
+          padding: const EdgeInsets.all(AppSizes.md),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                ),
+                child: Center(
+                  child: Text(
+                    '$sectionNumber',
+                    style: textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSizes.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                '${lessons.length} lessons',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
-        ),
+        
+        // Lessons
+        ...lessons.map((lesson) {
+          return _buildLessonItem(context, lesson);
+        }),
+        
+        const SizedBox(height: AppSizes.md),
       ],
     );
   }
 
-  Widget _buildSection(CourseSection section) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSizes.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: ExpansionTile(
-        title: Text(
-          section.title,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        subtitle: Text(
-          '${section.lessons.length} lessons',
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        children: section.lessons.map((lesson) {
-          return _buildLesson(lesson);
-        }).toList(),
-      ),
-    );
-  }
+  Widget _buildLessonItem(
+    BuildContext context,
+    Map<String, dynamic> lesson,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
-  Widget _buildLesson(LessonModel lesson) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-      leading: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: lesson.isPreview
-              ? AppColors.success.withOpacity(0.1)
-              : AppColors.primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-        ),
-        child: Icon(
-          lesson.isPreview ? Icons.play_arrow : Icons.lock,
-          size: 16,
-          color: lesson.isPreview ? AppColors.success : AppColors.primary,
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.md,
+        vertical: AppSizes.sm,
       ),
-      title: Text(
-        lesson.title,
-        style: const TextStyle(
-          fontSize: 14,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
-          Text(
-            lesson.formattedDuration,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
+          Icon(
+            lesson['preview'] == true
+                ? Icons.play_circle_outline
+                : Icons.lock_outline,
+            size: 20,
+            color: lesson['preview'] == true
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: AppSizes.sm),
+          Expanded(
+            child: Text(
+              lesson['title'] as String,
+              style: textTheme.bodyMedium?.copyWith(
+                color: lesson['preview'] == true
+                    ? colorScheme.onSurface
+                    : colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
-          if (lesson.isPreview) ...[
-            const SizedBox(width: AppSizes.sm),
+          if (lesson['preview'] == true)
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSizes.sm,
                 vertical: AppSizes.xs,
               ),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
+                color: colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(AppSizes.radiusSm),
               ),
-              child: const Text(
+              child: Text(
                 'Preview',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: AppColors.success,
+                style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-          ],
+          const SizedBox(width: AppSizes.sm),
+          Text(
+            lesson['duration'] as String,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );
@@ -674,49 +721,70 @@ class _ReviewsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    // Mock reviews
+    final reviews = [
+      {
+        'name': 'Alice Johnson',
+        'rating': 5,
+        'comment': 'Excellent course! The instructor explains everything clearly.',
+        'date': '2 days ago',
+      },
+      {
+        'name': 'Bob Smith',
+        'rating': 4,
+        'comment': 'Great content, but could use more practical examples.',
+        'date': '1 week ago',
+      },
+      {
+        'name': 'Carol White',
+        'rating': 5,
+        'comment': 'Best course I\'ve taken on this platform!',
+        'date': '2 weeks ago',
+      },
+    ];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSizes.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Rating summary
+          // Rating Summary
           Container(
             padding: const EdgeInsets.all(AppSizes.lg),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-              border: Border.all(color: AppColors.border),
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
             ),
             child: Row(
               children: [
                 Column(
                   children: [
                     Text(
-                      course.rating.toString(),
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                      course.rating.toStringAsFixed(1),
+                      style: textTheme.displayMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                     Row(
-                      children: List.generate(
-                        5,
-                        (index) => Icon(
-                          Icons.star,
+                      children: List.generate(5, (index) {
+                        return Icon(
+                          Icons.star_rounded,
                           size: 16,
                           color: index < course.rating.floor()
-                              ? AppColors.warning
-                              : AppColors.border,
-                        ),
-                      ),
+                              ? const Color(0xFFFFB800)
+                              : colorScheme.outline,
+                        );
+                      }),
                     ),
                     const SizedBox(height: AppSizes.xs),
                     Text(
-                      '${course.totalRatings} reviews',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
+                      '${course.totalStudents} reviews',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -724,12 +792,12 @@ class _ReviewsTab extends StatelessWidget {
                 const SizedBox(width: AppSizes.lg),
                 Expanded(
                   child: Column(
-                    children: [5, 4, 3, 2, 1].map((star) {
-                      final percentage = star == 5
+                    children: [5, 4, 3, 2, 1].map((stars) {
+                      final percent = stars == 5
                           ? 0.7
-                          : star == 4
+                          : stars == 4
                               ? 0.2
-                              : star == 3
+                              : stars == 3
                                   ? 0.08
                                   : 0.02;
                       return Padding(
@@ -737,30 +805,28 @@ class _ReviewsTab extends StatelessWidget {
                         child: Row(
                           children: [
                             Text(
-                              '$star',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                              ),
+                              '$stars',
+                              style: textTheme.bodySmall,
                             ),
                             const SizedBox(width: AppSizes.xs),
-                            const Icon(
-                              Icons.star,
+                            Icon(
+                              Icons.star_rounded,
                               size: 12,
-                              color: AppColors.warning,
+                              color: const Color(0xFFFFB800),
                             ),
                             const SizedBox(width: AppSizes.sm),
                             Expanded(
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusFull,
+                                ),
                                 child: LinearProgressIndicator(
-                                  value: percentage,
-                                  backgroundColor: AppColors.border,
-                                  valueColor:
-                                      const AlwaysStoppedAnimation<Color>(
-                                    AppColors.warning,
+                                  value: percent,
+                                  backgroundColor: colorScheme.outlineVariant,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    const Color(0xFFFFB800),
                                   ),
-                                  minHeight: 6,
+                                  minHeight: 4,
                                 ),
                               ),
                             ),
@@ -773,59 +839,31 @@ class _ReviewsTab extends StatelessWidget {
               ],
             ),
           ),
+          
           const SizedBox(height: AppSizes.lg),
-          // Reviews list
-          const Text(
-            'Student Reviews',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: AppSizes.md),
-          ...List.generate(5, (index) {
-            return _buildReviewItem(index);
+          
+          // Reviews List
+          ...reviews.map((review) {
+            return _buildReviewItem(context, review);
           }),
         ],
       ),
     );
   }
 
-  Widget _buildReviewItem(int index) {
-    final reviews = [
-      {
-        'name': 'Alice Johnson',
-        'rating': 5,
-        'comment':
-            'Excellent course! The instructor explains everything clearly and the content is well-structured.',
-        'date': '2 days ago',
-      },
-      {
-        'name': 'Bob Smith',
-        'rating': 4,
-        'comment':
-            'Great course overall. Would love more practical exercises.',
-        'date': '1 week ago',
-      },
-      {
-        'name': 'Carol White',
-        'rating': 5,
-        'comment':
-            'Best course I\'ve taken on this platform. Highly recommended!',
-        'date': '2 weeks ago',
-      },
-    ];
-
-    final review = reviews[index % reviews.length];
+  Widget _buildReviewItem(
+    BuildContext context,
+    Map<String, dynamic> review,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.md),
       padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        border: Border.all(color: colorScheme.outlineVariant),
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -834,7 +872,7 @@ class _ReviewsTab extends StatelessWidget {
             children: [
               AvatarWidget(
                 name: review['name'] as String,
-                size: 40,
+                size: AvatarSize.small,
               ),
               const SizedBox(width: AppSizes.sm),
               Expanded(
@@ -843,22 +881,26 @@ class _ReviewsTab extends StatelessWidget {
                   children: [
                     Text(
                       review['name'] as String,
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
                       ),
                     ),
                     Row(
                       children: [
-                        ...List.generate(
-                          5,
-                          (i) => Icon(
-                            Icons.star,
+                        ...List.generate(5, (index) {
+                          return Icon(
+                            Icons.star_rounded,
                             size: 12,
-                            color: i < (review['rating'] as int)
-                                ? AppColors.warning
-                                : AppColors.border,
+                            color: index < (review['rating'] as int)
+                                ? const Color(0xFFFFB800)
+                                : colorScheme.outline,
+                          );
+                        }),
+                        const SizedBox(width: AppSizes.sm),
+                        Text(
+                          review['date'] as String,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -866,22 +908,13 @@ class _ReviewsTab extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(
-                review['date'] as String,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
             ],
           ),
           const SizedBox(height: AppSizes.sm),
           Text(
             review['comment'] as String,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-              height: 1.5,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -890,189 +923,116 @@ class _ReviewsTab extends StatelessWidget {
   }
 }
 
-/// Enrollment Bottom Sheet
-class _EnrollmentBottomSheet extends StatelessWidget {
-  const _EnrollmentBottomSheet({required this.course});
+/// Teacher Tab
+class _TeacherTab extends StatelessWidget {
+  const _TeacherTab({required this.course});
 
   final CourseModel course;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSizes.lg),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSizes.radiusXl),
-        ),
-      ),
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSizes.md),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSizes.lg),
-          const Text(
-            'Confirm Enrollment',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: AppSizes.md),
-          // Course summary
+          // Teacher Card
           Container(
-            padding: const EdgeInsets.all(AppSizes.md),
+            padding: const EdgeInsets.all(AppSizes.lg),
             decoration: BoxDecoration(
-              color: AppColors.background,
+              color: colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(AppSizes.radiusMd),
             ),
-            child: Row(
+            child: Column(
               children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  child: Icon(
-                    _getCategoryIcon(course.category),
-                    color: AppColors.primary,
+                AvatarWidget(
+                  name: course.teacher?.name ?? 'Teacher',
+                  size: AvatarSize.extraLarge,
+                ),
+                const SizedBox(height: AppSizes.md),
+                Text(
+                  course.teacher?.name ?? 'Teacher',
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: AppSizes.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        course.title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        'by ${course.teacher?.name ?? "Unknown"}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: AppSizes.xs),
+                Text(
+                  'Expert Instructor',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
                   ),
+                ),
+                const SizedBox(height: AppSizes.md),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildStat(context, '4.9', 'Rating'),
+                    const SizedBox(width: AppSizes.lg),
+                    _buildStat(context, '1.2K', 'Students'),
+                    const SizedBox(width: AppSizes.lg),
+                    _buildStat(context, '15', 'Courses'),
+                  ],
                 ),
               ],
             ),
           ),
+          
           const SizedBox(height: AppSizes.lg),
-          // Price breakdown
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Course Price',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              Text(
-                course.formattedPrice,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
+          
+          // Bio
+          Text(
+            'About',
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: AppSizes.sm),
-          const Divider(),
-          const SizedBox(height: AppSizes.sm),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Total',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Text(
-                course.formattedPrice,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
+          Text(
+            'An experienced instructor with over 10 years of teaching experience. '
+            'Passionate about helping students achieve their learning goals through '
+            'practical, hands-on instruction.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.6,
+            ),
           ),
+          
           const SizedBox(height: AppSizes.lg),
-          // Buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(AppStrings.cancel),
-                ),
-              ),
-              const SizedBox(width: AppSizes.md),
-              Expanded(
-                flex: 2,
-                child: PrimaryButton(
-                  text: AppStrings.payNow,
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushNamed(AppRoutes.payment);
-                  },
-                ),
-              ),
-            ],
+          
+          // Subscribe Button
+          PrimaryButton(
+            text: 'Subscribe to Teacher',
+            onPressed: () {},
+            isOutlined: true,
           ),
-          SizedBox(height: MediaQuery.of(context).viewPadding.bottom),
         ],
       ),
     );
   }
-}
 
-/// Helper function to get category icon
-IconData _getCategoryIcon(CourseCategory category) {
-  switch (category) {
-    case CourseCategory.math:
-      return Icons.calculate;
-    case CourseCategory.science:
-      return Icons.science;
-    case CourseCategory.language:
-      return Icons.translate;
-    case CourseCategory.arts:
-      return Icons.palette;
-    case CourseCategory.music:
-      return Icons.music_note;
-    case CourseCategory.coding:
-      return Icons.code;
-    case CourseCategory.business:
-      return Icons.business;
-    case CourseCategory.other:
-      return Icons.category;
+  Widget _buildStat(BuildContext context, String value, String label) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      children: [
+        Text(
+          value,
+          style: textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          label,
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -1,51 +1,118 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
 import '../../constants/app_sizes.dart';
 
-/// Loading widget with optional message
+/// Modern loading widget with theme-aware styling
 class LoadingWidget extends StatelessWidget {
   const LoadingWidget({
     super.key,
-    this.message,
-    this.size = 40.0,
-    this.strokeWidth = 3.0,
+    this.size = LoadingSize.medium,
     this.color,
+    this.strokeWidth,
+    this.message,
+    this.messageStyle,
   });
 
-  final String? message;
-  final double size;
-  final double strokeWidth;
+  final LoadingSize size;
   final Color? color;
+  final double? strokeWidth;
+  final String? message;
+  final TextStyle? messageStyle;
+
+  double get _indicatorSize {
+    switch (size) {
+      case LoadingSize.small:
+        return 20;
+      case LoadingSize.medium:
+        return 32;
+      case LoadingSize.large:
+        return 48;
+    }
+  }
+
+  double get _strokeWidth {
+    switch (size) {
+      case LoadingSize.small:
+        return 2;
+      case LoadingSize.medium:
+        return 3;
+      case LoadingSize.large:
+        return 4;
+    }
+  }
+
+  double get _fontSize {
+    switch (size) {
+      case LoadingSize.small:
+        return 12;
+      case LoadingSize.medium:
+        return 14;
+      case LoadingSize.large:
+        return 16;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: size,
-            height: size,
-            child: CircularProgressIndicator(
-              strokeWidth: strokeWidth,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                color ?? AppColors.primary,
-              ),
-            ),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    final effectiveColor = color ?? colorScheme.primary;
+    final effectiveStrokeWidth = strokeWidth ?? _strokeWidth;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: _indicatorSize,
+          height: _indicatorSize,
+          child: CircularProgressIndicator(
+            strokeWidth: effectiveStrokeWidth,
+            valueColor: AlwaysStoppedAnimation<Color>(effectiveColor),
           ),
-          if (message != null) ...[
-            const SizedBox(height: AppSizes.md),
-            Text(
-              message!,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+        ),
+        if (message != null) ...[
+          const SizedBox(height: AppSizes.md),
+          Text(
+            message!,
+            style: messageStyle ??
+                theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: _fontSize,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+            textAlign: TextAlign.center,
+          ),
         ],
+      ],
+    );
+  }
+}
+
+/// Full screen loading overlay
+class LoadingOverlay extends StatelessWidget {
+  const LoadingOverlay({
+    super.key,
+    this.message,
+    this.backgroundColor,
+    this.indicatorColor,
+  });
+
+  final String? message;
+  final Color? backgroundColor;
+  final Color? indicatorColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      color: backgroundColor ?? colorScheme.surface.withOpacity(0.9),
+      child: Center(
+        child: LoadingWidget(
+          size: LoadingSize.large,
+          color: indicatorColor ?? colorScheme.primary,
+          message: message,
+        ),
       ),
     );
   }
@@ -77,8 +144,8 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      vsync: this,
       duration: const Duration(milliseconds: 1500),
+      vsync: this,
     )..repeat();
     _animation = Tween<double>(begin: -2, end: 2).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
@@ -93,28 +160,34 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    final baseColor = widget.baseColor ?? 
+        colorScheme.surfaceContainerHighest;
+    final highlightColor = widget.highlightColor ?? 
+        colorScheme.surface;
+
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
         return ShaderMask(
+          blendMode: BlendMode.srcATop,
           shaderCallback: (bounds) {
             return LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                widget.baseColor ?? AppColors.background,
-                widget.highlightColor ?? AppColors.surface,
-                widget.baseColor ?? AppColors.background,
+                baseColor,
+                highlightColor,
+                baseColor,
               ],
               stops: const [0.0, 0.5, 1.0],
               transform: _SlideGradientTransform(_animation.value),
             ).createShader(bounds);
           },
-          blendMode: BlendMode.srcATop,
           child: widget.child,
         );
       },
-      child: widget.child,
     );
   }
 }
@@ -129,3 +202,5 @@ class _SlideGradientTransform extends GradientTransform {
     return Matrix4.translationValues(bounds.width * slidePercent, 0.0, 0.0);
   }
 }
+
+enum LoadingSize { small, medium, large }

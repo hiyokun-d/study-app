@@ -1,80 +1,70 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../../core/widgets/common/avatar_widget.dart';
 
-/// Chat detail screen for messaging between users
+/// Modern chat detail screen with theme-aware styling
 class ChatDetailScreen extends StatefulWidget {
-  const ChatDetailScreen({super.key});
+  const ChatDetailScreen({
+    super.key,
+    required this.userName,
+    this.userImage,
+  });
+
+  final String userName;
+  final String? userImage;
 
   @override
   State<ChatDetailScreen> createState() => _ChatDetailScreenState();
 }
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
-  final _messageController = TextEditingController();
-  final _scrollController = ScrollController();
-  final List<ChatMessage> _messages = [];
+  final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  bool _isTyping = false;
+
+  final List<ChatMessage> _messages = [
+    ChatMessage(
+      message: 'Hi! I have a question about the course.',
+      isMe: false,
+      time: DateTime.now().subtract(const Duration(hours: 2)),
+    ),
+    ChatMessage(
+      message: 'Hello! Sure, what would you like to know?',
+      isMe: true,
+      time: DateTime.now().subtract(const Duration(hours: 1, minutes: 55)),
+    ),
+    ChatMessage(
+      message: 'I\'m having trouble understanding the calculus section. Can you help?',
+      isMe: false,
+      time: DateTime.now().subtract(const Duration(hours: 1, minutes: 50)),
+    ),
+    ChatMessage(
+      message: 'Of course! Let me explain. Calculus is all about understanding rates of change.',
+      isMe: true,
+      time: DateTime.now().subtract(const Duration(hours: 1, minutes: 45)),
+    ),
+    ChatMessage(
+      message: 'That makes sense! Thank you for the explanation.',
+      isMe: false,
+      time: DateTime.now().subtract(const Duration(hours: 1)),
+    ),
+  ];
 
   @override
-  void initState() {
-    super.initState();
-    _loadMessages();
-  }
-
-  void _loadMessages() {
-    // Load dummy messages
-    _messages.addAll([
-      ChatMessage(
-        id: '1',
-        text: 'Hi! I have a question about the calculus course.',
-        isMe: true,
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      ),
-      ChatMessage(
-        id: '2',
-        text: 'Hello! Of course, I\'d be happy to help. What would you like to know?',
-        isMe: false,
-        timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 55)),
-      ),
-      ChatMessage(
-        id: '3',
-        text: 'I\'m struggling with the integration by parts section. Can you explain it more simply?',
-        isMe: true,
-        timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 30)),
-      ),
-      ChatMessage(
-        id: '4',
-        text: 'Of course! Integration by parts is essentially the reverse of the product rule. Think of it as:\n\n∫u dv = uv - ∫v du\n\nThe key is choosing u and dv correctly. Would you like me to walk through an example?',
-        isMe: false,
-        timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 25)),
-      ),
-      ChatMessage(
-        id: '5',
-        text: 'Yes please! That would be very helpful.',
-        isMe: true,
-        timestamp: DateTime.now().subtract(const Duration(minutes: 45)),
-      ),
-      ChatMessage(
-        id: '6',
-        text: 'Great! Let\'s solve ∫x·e^x dx\n\nStep 1: Choose u = x (easier to differentiate)\nStep 2: Then dv = e^x dx\nStep 3: Find du = dx and v = e^x\n\nNow apply the formula:\n∫x·e^x dx = x·e^x - ∫e^x dx\n= x·e^x - e^x + C\n= e^x(x - 1) + C\n\nDoes this help?',
-        isMe: false,
-        timestamp: DateTime.now().subtract(const Duration(minutes: 40)),
-      ),
-    ]);
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _sendMessage() {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (_messageController.text.trim().isEmpty) return;
 
     setState(() {
       _messages.add(ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        text: text,
+        message: _messageController.text.trim(),
         isMe: true,
-        timestamp: DateTime.now(),
+        time: DateTime.now(),
       ));
       _messageController.clear();
     });
@@ -84,7 +74,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
       }
@@ -92,81 +82,79 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: _buildAppBar(),
+      backgroundColor: colorScheme.surface,
+      appBar: _buildAppBar(context),
       body: Column(
         children: [
-          // Messages list
+          // Messages
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(AppSizes.md),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                final showDate = index == 0 ||
-                    !_isSameDay(
-                      _messages[index - 1].timestamp,
-                      message.timestamp,
-                    );
-                return Column(
-                  children: [
-                    if (showDate) _buildDateSeparator(message.timestamp),
-                    _buildMessageBubble(message),
-                  ],
-                );
-              },
-            ),
+            child: _buildMessagesList(context),
           ),
-          // Input area
-          _buildInputArea(),
+          
+          // Typing indicator
+          if (_isTyping) _buildTypingIndicator(context),
+          
+          // Input
+          _buildMessageInput(context),
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return AppBar(
-      backgroundColor: AppColors.surface,
+      backgroundColor: colorScheme.surface,
       elevation: 0,
+      scrolledUnderElevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.of(context).pop(),
-        icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+        icon: Icon(
+          Icons.arrow_back_ios_new,
+          color: colorScheme.onSurface,
+        ),
       ),
       title: Row(
         children: [
-          const AvatarWidget(
-            name: 'Dr. Sarah Johnson',
-            size: 40,
-            isOnline: true,
+          AvatarWidget(
+            name: widget.userName,
+            size: AvatarSize.small,
           ),
           const SizedBox(width: AppSizes.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Dr. Sarah Johnson',
-                  style: TextStyle(
-                    fontSize: 16,
+                Text(
+                  widget.userName,
+                  style: textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
                   ),
                 ),
-                Text(
-                  AppStrings.online,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.success,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: AppSizes.xs),
+                    Text(
+                      'Online',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -176,167 +164,315 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       actions: [
         IconButton(
           onPressed: () {},
-          icon: const Icon(Icons.videocam, color: AppColors.primary),
+          icon: Icon(
+            Icons.videocam_rounded,
+            color: colorScheme.onSurface,
+          ),
         ),
         IconButton(
           onPressed: () {},
-          icon: const Icon(Icons.call, color: AppColors.primary),
+          icon: Icon(
+            Icons.call_rounded,
+            color: colorScheme.onSurface,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildDateSeparator(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final messageDate = DateTime(date.year, date.month, date.day);
+  Widget _buildMessagesList(BuildContext context) {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(AppSizes.md),
+      itemCount: _messages.length,
+      itemBuilder: (context, index) {
+        final message = _messages[index];
+        final showDate = index == 0 ||
+            !_isSameDay(
+              _messages[index - 1].time,
+              message.time,
+            );
 
-    String text;
-    if (messageDate == today) {
-      text = 'Today';
-    } else if (messageDate == today.subtract(const Duration(days: 1))) {
-      text = 'Yesterday';
+        return Column(
+          children: [
+            if (showDate) _buildDateDivider(context, message.time),
+            _buildMessageBubble(context, message),
+          ],
+        );
+      },
+    );
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Widget _buildDateDivider(BuildContext context, DateTime date) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    String dateText;
+    final now = DateTime.now();
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      dateText = 'Today';
+    } else if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day - 1) {
+      dateText = 'Yesterday';
     } else {
-      text = '${date.day}/${date.month}/${date.year}';
+      dateText = '${date.day}/${date.month}/${date.year}';
     }
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: AppSizes.md),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.md,
-            vertical: AppSizes.xs,
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(color: colorScheme.outlineVariant),
           ),
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-          ),
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMessageBubble(ChatMessage message) {
-    return Align(
-      alignment: message.isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppSizes.sm),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        child: Column(
-          crossAxisAlignment:
-              message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSizes.md),
-              decoration: BoxDecoration(
-                color: message.isMe ? AppColors.primary : AppColors.background,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(AppSizes.radiusLg),
-                  topRight: const Radius.circular(AppSizes.radiusLg),
-                  bottomLeft: Radius.circular(
-                    message.isMe ? AppSizes.radiusLg : AppSizes.radiusSm,
-                  ),
-                  bottomRight: Radius.circular(
-                    message.isMe ? AppSizes.radiusSm : AppSizes.radiusLg,
-                  ),
-                ),
-              ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: message.isMe ? Colors.white : AppColors.textPrimary,
-                  height: 1.4,
-                ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+            child: Text(
+              dateText,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: AppSizes.xs),
-            Text(
-              _formatTime(message.timestamp),
-              style: TextStyle(
-                fontSize: 10,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputArea() {
-    return Container(
-      padding: EdgeInsets.only(
-        left: AppSizes.md,
-        right: AppSizes.md,
-        top: AppSizes.sm,
-        bottom: MediaQuery.of(context).viewPadding.bottom + AppSizes.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+          ),
+          Expanded(
+            child: Divider(color: colorScheme.outlineVariant),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMessageBubble(BuildContext context, ChatMessage message) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSizes.sm),
       child: Row(
+        mainAxisAlignment:
+            message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Attachment button
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.attach_file,
-              color: AppColors.textSecondary,
+          if (!message.isMe) ...[
+            AvatarWidget(
+              name: widget.userName,
+              size: AvatarSize.small,
+            ),
+            const SizedBox(width: AppSizes.sm),
+          ],
+          Flexible(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.65,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSizes.md,
+                vertical: AppSizes.sm,
+              ),
+              decoration: BoxDecoration(
+                color: message.isMe
+                    ? colorScheme.primary
+                    : colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(AppSizes.radiusMd),
+                  topRight: const Radius.circular(AppSizes.radiusMd),
+                  bottomLeft: Radius.circular(
+                    message.isMe ? AppSizes.radiusMd : AppSizes.radiusSm,
+                  ),
+                  bottomRight: Radius.circular(
+                    message.isMe ? AppSizes.radiusSm : AppSizes.radiusMd,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: message.isMe
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message.message,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: message.isMe
+                          ? colorScheme.onPrimary
+                          : colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.xs),
+                  Text(
+                    _formatTime(message.time),
+                    style: textTheme.labelSmall?.copyWith(
+                      color: message.isMe
+                          ? colorScheme.onPrimary.withOpacity(0.7)
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          // Text input
+          if (message.isMe) ...[
+            const SizedBox(width: AppSizes.sm),
+            Icon(
+              Icons.done_all_rounded,
+              size: 16,
+              color: colorScheme.primary,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(DateTime time) {
+    final hour = time.hour > 12 ? time.hour - 12 : time.hour;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
+  }
+
+  Widget _buildTypingIndicator(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.md,
+        vertical: AppSizes.sm,
+      ),
+      child: Row(
+        children: [
+          AvatarWidget(
+            name: widget.userName,
+            size: AvatarSize.small,
+          ),
+          const SizedBox(width: AppSizes.sm),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.md,
+              vertical: AppSizes.sm,
+            ),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'typing',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: AppSizes.xs),
+                _buildTypingDots(context),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypingDots(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(3, (index) {
+        return Container(
+          width: 4,
+          height: 4,
+          margin: const EdgeInsets.symmetric(horizontal: 1),
+          decoration: BoxDecoration(
+            color: colorScheme.onSurfaceVariant,
+            shape: BoxShape.circle,
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildMessageInput(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        AppSizes.md,
+        AppSizes.sm,
+        AppSizes.md,
+        MediaQuery.of(context).padding.bottom + AppSizes.sm,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: colorScheme.outlineVariant),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Attachment Button
+          IconButton(
+            onPressed: () {},
+            icon: Icon(
+              Icons.attach_file_rounded,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          
+          // Text Input
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
               decoration: BoxDecoration(
-                color: AppColors.background,
+                color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(AppSizes.radiusFull),
               ),
               child: TextField(
                 controller: _messageController,
-                decoration: const InputDecoration(
-                  hintText: AppStrings.typeMessage,
+                decoration: InputDecoration(
+                  hintText: 'Type a message...',
+                  hintStyle: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   border: InputBorder.none,
-                  hintStyle: TextStyle(color: AppColors.textSecondary),
                 ),
-                maxLines: null,
+                maxLines: 4,
+                minLines: 1,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendMessage(),
               ),
             ),
           ),
-          const SizedBox(width: AppSizes.sm),
-          // Send button
-          GestureDetector(
-            onTap: _sendMessage,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.send,
-                color: Colors.white,
+          
+          // Emoji Button
+          IconButton(
+            onPressed: () {},
+            icon: Icon(
+              Icons.emoji_emotions_outlined,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          
+          // Send Button
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: colorScheme.primary,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              onPressed: _sendMessage,
+              icon: Icon(
+                Icons.send_rounded,
+                color: colorScheme.onPrimary,
                 size: 20,
               ),
             ),
@@ -345,29 +481,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ),
     );
   }
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
-  String _formatTime(DateTime time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
 }
 
-/// Chat message model
 class ChatMessage {
-  const ChatMessage({
-    required this.id,
-    required this.text,
-    required this.isMe,
-    required this.timestamp,
-  });
-
-  final String id;
-  final String text;
+  final String message;
   final bool isMe;
-  final DateTime timestamp;
+  final DateTime time;
+
+  ChatMessage({
+    required this.message,
+    required this.isMe,
+    required this.time,
+  });
 }

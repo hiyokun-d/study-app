@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
-import '../../../routes/app_routes.dart';
 
-/// Role selection screen for choosing between student and teacher
+/// Modern role selection screen with theme-aware styling
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
 
@@ -13,13 +10,32 @@ class RoleSelectionScreen extends StatefulWidget {
   State<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
 }
 
-class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
-  UserRole? _selectedRole;
+class _RoleSelectionScreenState extends State<RoleSelectionScreen>
+    with SingleTickerProviderStateMixin {
+  String? _selectedRole;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
-  void _selectRole(UserRole role) {
-    setState(() {
-      _selectedRole = role;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOut,
+      ),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   void _continue() {
@@ -29,57 +45,116 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       );
       return;
     }
-
-    if (_selectedRole == UserRole.student) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.studentDashboard);
-    } else {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.teacherDashboard);
-    }
+    Navigator.of(context).pushNamed('/register');
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSizes.lg),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: AppSizes.xl),
-              // Title
-              _buildTitle(),
-              const SizedBox(height: AppSizes.xxl),
-              // Role cards
-              Expanded(
+              
+              // Header
+              FadeTransition(
+                opacity: _fadeAnimation,
                 child: Column(
                   children: [
-                    _buildRoleCard(
-                      role: UserRole.student,
-                      icon: Icons.school,
-                      title: AppStrings.iAmAStudent,
-                      description: AppStrings.studentDescription,
-                      color: AppColors.primary,
+                    Text(
+                      'Choose Your Role',
+                      style: textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: AppSizes.lg),
-                    _buildRoleCard(
-                      role: UserRole.teacher,
-                      icon: Icons.person_add,
-                      title: AppStrings.iAmATeacher,
-                      description: AppStrings.teacherDescription,
-                      color: AppColors.secondary,
+                    
+                    const SizedBox(height: AppSizes.sm),
+                    
+                    Text(
+                      'Are you here to learn or to teach?',
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
-              // Continue button
-              PrimaryButton(
-                text: AppStrings.continueWithGoogle.split(' ').first,
-                onPressed: _continue,
-                isEnabled: _selectedRole != null,
+              
+              const SizedBox(height: AppSizes.xxl),
+              
+              // Role Cards
+              Expanded(
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: _buildRoleCard(
+                          role: 'student',
+                          icon: Icons.school_rounded,
+                          title: 'Student',
+                          subtitle: 'I want to learn new skills',
+                          features: [
+                            'Access thousands of courses',
+                            'Learn from expert tutors',
+                            'Track your progress',
+                            'Get certificates',
+                          ],
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6C63FF), Color(0xFF9B94FF)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: AppSizes.md),
+                      
+                      Expanded(
+                        child: _buildRoleCard(
+                          role: 'teacher',
+                          icon: Icons.person_rounded,
+                          title: 'Teacher',
+                          subtitle: 'I want to share my knowledge',
+                          features: [
+                            'Create and sell courses',
+                            'Reach students globally',
+                            'Track your earnings',
+                            'Build your brand',
+                          ],
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF6B6B), Color(0xFFFF8A8A)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: AppSizes.lg),
+              
+              const SizedBox(height: AppSizes.xl),
+              
+              // Continue Button
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: PrimaryButton(
+                  text: 'Continue',
+                  onPressed: _continue,
+                  isEnabled: _selectedRole != null,
+                ),
+              ),
             ],
           ),
         ),
@@ -87,113 +162,106 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     );
   }
 
-  Widget _buildTitle() {
-    return Column(
-      children: [
-        const Text(
-          AppStrings.chooseYourRole,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: AppSizes.sm),
-        Text(
-          'Select how you want to use Study App',
-          style: TextStyle(
-            fontSize: 16,
-            color: AppColors.textSecondary,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
   Widget _buildRoleCard({
-    required UserRole role,
+    required String role,
     required IconData icon,
     required String title,
-    required String description,
-    required Color color,
+    required String subtitle,
+    required List<String> features,
+    required LinearGradient gradient,
   }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
     final isSelected = _selectedRole == role;
 
     return GestureDetector(
-      onTap: () => _selectRole(role),
+      onTap: () {
+        setState(() => _selectedRole = role);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(AppSizes.lg),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : AppColors.surface,
+          color: isSelected
+              ? colorScheme.surface
+              : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(AppSizes.radiusLg),
           border: Border.all(
-            color: isSelected ? color : AppColors.border,
-            width: isSelected ? 2 : 1,
+            color: isSelected
+                ? gradient.colors.first
+                : Colors.transparent,
+            width: 2,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: color.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: gradient.colors.first.withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
                 ]
               : null,
         ),
         child: Row(
           children: [
-            // Icon
+            // Icon Container
             Container(
-              width: 64,
-              height: 64,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                gradient: gradient,
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
               ),
               child: Icon(
                 icon,
-                size: 32,
-                color: color,
+                size: 28,
+                color: Colors.white,
               ),
             ),
-            const SizedBox(width: AppSizes.lg),
+            
+            const SizedBox(width: AppSizes.md),
+            
             // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 18,
+                    style: textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? color : AppColors.textPrimary,
+                      color: colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: AppSizes.xs),
+                  
+                  const SizedBox(height: 2),
+                  
                   Text(
-                    description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
+                    subtitle,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             ),
-            // Check icon
+            
+            // Selection Indicator
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: 24,
               height: 24,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? color : Colors.transparent,
+                color: isSelected
+                    ? gradient.colors.first
+                    : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? color : AppColors.border,
+                  color: isSelected
+                      ? gradient.colors.first
+                      : colorScheme.outline,
                   width: 2,
                 ),
               ),
@@ -210,10 +278,4 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       ),
     );
   }
-}
-
-/// User role enum
-enum UserRole {
-  student,
-  teacher,
 }
