@@ -5,10 +5,12 @@ import { PrismaService } from 'src/prisma.service';
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async getTutor() {
-    console.log('this is new');
-    console.log(this.prisma.profiles);
-    console.log('--------------------------------');
-    return this.prisma.profiles.findMany();
+  // Implement your user service methods here
+  async getAllProfile() {
+    return this.prisma.profiles.findMany({
+      where: {
+        is_tutor: true,
+      },
+    });
   }
 }
