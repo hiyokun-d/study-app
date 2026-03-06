@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
+import '../../../core/widgets/buttons/social_auth_button.dart';
 import '../../../core/widgets/inputs/text_input.dart';
+import '../../../core/widgets/inputs/password_text_field.dart';
+import '../../../core/constants/app_assets.dart';
 
 /// Modern login screen with theme-aware styling
 class LoginScreen extends StatefulWidget {
@@ -16,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
   bool _isLoading = false;
 
   @override
@@ -96,18 +98,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: AppSizes.md),
                 
                 // Password Input
-                TextInput(
+                PasswordTextField(
                   controller: _passwordController,
                   label: AppStrings.password,
                   hint: 'Enter your password',
-                  prefixIcon: Icons.lock_outline,
-                  obscureText: _obscurePassword,
-                  suffixIcon: _obscurePassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  onSuffixIconPressed: () {
-                    setState(() => _obscurePassword = !_obscurePassword);
-                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
@@ -175,19 +169,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: AppSizes.xl),
                 
                 // Social Login Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Column(
                   children: [
-                    _buildSocialButton(
-                      icon: Icons.g_mobiledata,
-                      label: 'Google',
-                      onTap: () {},
+                    SocialAuthButton(
+                      label: 'Continue with Google',
+                      icon: Image.asset(AppAssets.googleIcon),
+                      onPressed: () {},
                     ),
-                    const SizedBox(width: AppSizes.md),
-                    _buildSocialButton(
-                      icon: Icons.apple,
-                      label: 'Apple',
-                      onTap: () {},
+                    const SizedBox(height: AppSizes.md),
+                    SocialAuthButton(
+                      label: 'Continue with Apple',
+                      icon: Image.asset(AppAssets.appleIcon),
+                      onPressed: () {},
                     ),
                   ],
                 ),
@@ -226,43 +219,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildSocialButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
-          decoration: BoxDecoration(
-            border: Border.all(color: colorScheme.outline),
-            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: colorScheme.onSurface,
-              ),
-              const SizedBox(width: AppSizes.sm),
-              Text(
-                label,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
