@@ -57,7 +57,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 //after the introduction of the app, then this will be showing the next page
   void _navigateToNext() {
-    Navigator.of(context).pushReplacementNamed('/login_screen');
+    Navigator.of(context).pushReplacementNamed('/login');
   }
 
   @override
@@ -75,22 +75,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Column(
             children: [
               // Skip Button
-              Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSizes.md),
-                  child: TextButton(
-                    onPressed: _skip,
-                    child: Text(
-                      'Skip',
-                      style: TextStyle(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              // Align(
+              //   alignment: Alignment.topRight,
+              //   child: Padding(
+              //     padding: const EdgeInsets.all(AppSizes.md),
+              //     child: TextButton(
+              //       onPressed: _skip,
+              //       child: Text(
+              //         'Skip',
+              //         style: TextStyle(
+              //           color: colorScheme.onSurface,
+              //           fontWeight: FontWeight.w500,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // ),
 
               // Page View
               Expanded(
