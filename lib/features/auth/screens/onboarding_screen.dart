@@ -55,8 +55,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _navigateToNext();
   }
 
+//after the introduction of the app, then this will be showing the next page
   void _navigateToNext() {
-    Navigator.of(context).pushReplacementNamed('/role-selection');
+    Navigator.of(context).pushReplacementNamed('/login_screen');
   }
 
   @override
@@ -219,11 +220,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             page.subtitle,
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              height: 1.6,
-              fontSize: 16,
-              fontWeight: FontWeight.w100
-            ),
+                color: colorScheme.onSurfaceVariant,
+                height: 1.6,
+                fontSize: 16,
+                fontWeight: FontWeight.w100),
             textAlign: TextAlign.center,
           ),
         ],
