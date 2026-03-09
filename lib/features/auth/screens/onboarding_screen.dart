@@ -29,7 +29,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     const OnboardingPage(
       icon: Icons.book,
-      title: 'Learna anything',
+      title: 'Learn anything',
       subtitle: 'Keep learning no matter how hard it is',
     ),
   ];
