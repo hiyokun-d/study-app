@@ -25,8 +25,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found or token is invalid.');
     }
 
-    // 🔥 This is the magic! Whatever we return here becomes `req.user`
-    console.log(payload.sub, payload);
     return {
       userId: payload.sub,
       email: payload.email,
