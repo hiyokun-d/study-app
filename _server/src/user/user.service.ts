@@ -122,9 +122,9 @@ export class UserService {
     return tutor;
   }
 
-  async updateProfile(userID: string, data: UpdateProfileDTO) {
+  async updateProfile(userId: string, data: UpdateProfileDTO) {
     const user = await this.prisma.profiles.findUnique({
-      where: { id: userID },
+      where: { id: userId },
     });
 
     if (!user) {
@@ -132,7 +132,7 @@ export class UserService {
     }
 
     const updateUserProfile = await this.prisma.profiles.update({
-      where: { id: userID },
+      where: { id: userId },
       data: {
         full_name: data.full_name,
         username: data.username,

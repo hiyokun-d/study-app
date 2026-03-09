@@ -26,6 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     // 🔥 This is the magic! Whatever we return here becomes `req.user`
+    console.log(payload.sub, payload);
     return {
       userId: payload.sub,
       email: payload.email,

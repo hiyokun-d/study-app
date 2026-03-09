@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Query,
+  Req,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -43,13 +44,15 @@ export class UserController {
     return this.userService.getTutorDetailProfile(id);
   }
 
-  // @UseGuards(AuthGuard('jwt'))
-  // @Patch('update/profile')
-  // async updateProfile(@Body() body: any) {
-  //   return this.userService.updateProfile(body.userId, {
-  //     full_name: body.full_name,
-  //   });
-  // }
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('update/profile')
+  async updateProfile(@Request() req: any, @Body() body: any) {
+    console.log(req.user);
+
+    return this.userService.updateProfile(req.userId, {
+      full_name: body.full_name,
+    });
+  }
 
   @Get()
   async getDummyData() {
