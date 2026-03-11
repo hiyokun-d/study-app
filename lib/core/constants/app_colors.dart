@@ -87,6 +87,10 @@ class AppColors {
   // ===========================================
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFF1479FF), Colors.white],
+<<<<<<< HEAD
+=======
+    stops: [0.0, 0.75],
+>>>>>>> 6586c5f (Add core models and test widget for UI components)
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
