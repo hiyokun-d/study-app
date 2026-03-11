@@ -22,10 +22,8 @@ packages:
     description:
       name: characters
       sha256: faf38497bda5ead2a8c7615f4f7939df04333478bf32e4173fcb06d428b5716b
-      sha256: faf38497bda5ead2a8c7615f4f7939df04333478bf32e4173fcb06d428b5716b
       url: "https://pub.dev"
     source: hosted
-    version: "1.4.1"
     version: "1.4.1"
   clock:
     dependency: transitive
@@ -202,20 +200,16 @@ packages:
     description:
       name: matcher
       sha256: "12956d0ad8390bbcc63ca2e1469c0619946ccb52809807067a7020d57e647aa6"
-      sha256: "12956d0ad8390bbcc63ca2e1469c0619946ccb52809807067a7020d57e647aa6"
       url: "https://pub.dev"
     source: hosted
-    version: "0.12.18"
     version: "0.12.18"
   material_color_utilities:
     dependency: transitive
     description:
       name: material_color_utilities
       sha256: "9c337007e82b1889149c82ed242ed1cb24a66044e30979c44912381e9be4c48b"
-      sha256: "9c337007e82b1889149c82ed242ed1cb24a66044e30979c44912381e9be4c48b"
       url: "https://pub.dev"
     source: hosted
-    version: "0.13.0"
     version: "0.13.0"
   meta:
     dependency: transitive
@@ -225,22 +219,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.17.0"
-  native_toolchain_c:
-    dependency: transitive
-    description:
-      name: native_toolchain_c
-      sha256: "92b2ca62c8bd2b8d2f267cdfccf9bfbdb7322f778f8f91b3ce5b5cda23a3899f"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.17.5"
-  objective_c:
-    dependency: transitive
-    description:
-      name: objective_c
-      sha256: "100a1c87616ab6ed41ec263b083c0ef3261ee6cd1dc3b0f35f8ddfa4f996fe52"
-      url: "https://pub.dev"
-    source: hosted
-    version: "9.3.0"
   path:
     dependency: transitive
     description:
@@ -374,6 +352,7 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.9"
+<<<<<<< HEAD
   typed_data:
     dependency: transitive
     description:
@@ -383,6 +362,9 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.9"
+=======
+<<<<<<< Updated upstream
+>>>>>>> 6cd9c1bf9a6aaab90c6eabe44cdaf67e252f9a22
   typed_data:
     dependency: transitive
     description:
@@ -391,7 +373,12 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+<<<<<<< HEAD
     version: "1.4.0"
+=======
+=======
+>>>>>>> Stashed changes
+>>>>>>> 6cd9c1bf9a6aaab90c6eabe44cdaf67e252f9a22
   vector_math:
     dependency: transitive
     description:

@@ -16,11 +16,6 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       fontFamily: 'Manrope',
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Color Scheme
       colorScheme: ColorScheme.light(
         // Primary colors
@@ -28,51 +23,21 @@ class AppTheme {
         onPrimary: Colors.white,
         primaryContainer: AppColors.accent1,
         onPrimaryContainer: AppColors.primary,
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Secondary colors
         secondary: AppColors.accent2,
         onSecondary: Colors.white,
         secondaryContainer: AppColors.accent2,
         onSecondaryContainer: AppColors.accent2,
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Tertiary colors
         tertiary: AppColors.accent3,
         onTertiary: Colors.white,
         tertiaryContainer: AppColors.accent3,
         onTertiaryContainer: AppColors.accent3,
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Error colors
         error: AppColors.error,
         onError: Colors.white,
         errorContainer: AppColors.errorContainer,
         onErrorContainer: AppColors.errorDark,
-<<<<<<< HEAD
-        
-        // Surface colors
-        surface: AppColors.surface,
-        onSurface: AppColors.textPrimary,
-        surfaceContainerHighest: AppColors.surfaceContainerHigh,
-        
-        // Background
-        surfaceTint: AppColors.primary.withAlpha(12),
-        
-        // Outline
-        outline: AppColors.border,
-        outlineVariant: AppColors.borderLight,
-        
-=======
 
         // Surface colors
         surface: AppColors.surface,
@@ -86,31 +51,18 @@ class AppTheme {
         outline: AppColors.border,
         outlineVariant: AppColors.borderLight,
 
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Inverse
         inverseSurface: AppColors.textPrimary,
         onInverseSurface: Colors.white,
         inversePrimary: AppColors.accent1,
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Shadow & scrim
         shadow: AppColors.shadowMedium,
         scrim: AppColors.scrimLight,
       ),
-<<<<<<< HEAD
-      
-      // Scaffold
-      scaffoldBackgroundColor: AppColors.background,
-      
-=======
 
       // Scaffold
       scaffoldBackgroundColor: AppColors.background,
 
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // AppBar Theme - Clean and minimal
       appBarTheme: AppBarTheme(
         elevation: 0,
@@ -130,17 +82,10 @@ class AppTheme {
           size: 24,
         ),
       ),
-<<<<<<< HEAD
-      
-      // Text Theme - Modern typography
-      textTheme: _buildLightTextTheme(),
-      
-=======
 
       // Text Theme - Modern typography
       textTheme: _buildLightTextTheme(),
 
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Elevated Button Theme - Modern filled buttons
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -160,11 +105,6 @@ class AppTheme {
           ),
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Filled Button Theme (Material 3)
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -182,11 +122,6 @@ class AppTheme {
           ),
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Outlined Button Theme
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
@@ -204,11 +139,6 @@ class AppTheme {
           ),
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Text Button Theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -224,11 +154,6 @@ class AppTheme {
           ),
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Input Decoration Theme - Clean inputs
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -276,11 +201,6 @@ class AppTheme {
         prefixIconColor: AppColors.textSecondary,
         suffixIconColor: AppColors.textSecondary,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Card Theme - Subtle elevation
       cardTheme: CardThemeData(
         color: AppColors.card,
@@ -291,11 +211,6 @@ class AppTheme {
         ),
         clipBehavior: Clip.antiAlias,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Bottom Navigation Bar Theme
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.surface,
@@ -312,11 +227,6 @@ class AppTheme {
           fontWeight: FontWeight.w500,
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Navigation Bar Theme (Material 3)
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
@@ -350,11 +260,6 @@ class AppTheme {
           );
         }),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Floating Action Button Theme
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
@@ -365,11 +270,6 @@ class AppTheme {
         highlightElevation: 2,
         shape: CircleBorder(),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Chip Theme
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceVariant,
@@ -385,33 +285,19 @@ class AppTheme {
           fontWeight: FontWeight.w500,
           color: AppColors.textPrimary,
         ),
-<<<<<<< HEAD
-        padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.xs),
-=======
         padding: const EdgeInsets.symmetric(
             horizontal: AppSizes.sm, vertical: AppSizes.xs),
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusFull),
         ),
         side: BorderSide.none,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Divider Theme
       dividerTheme: const DividerThemeData(
         color: AppColors.divider,
         thickness: 1,
         space: 1,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Bottom Sheet Theme
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.surface,
@@ -424,11 +310,6 @@ class AppTheme {
         showDragHandle: true,
         dragHandleColor: AppColors.border,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Dialog Theme
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surface,
@@ -446,11 +327,6 @@ class AppTheme {
           color: AppColors.textSecondary,
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Snackbar Theme
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.textPrimary,
@@ -464,11 +340,6 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
         elevation: 3,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Tab Bar Theme
       tabBarTheme: TabBarThemeData(
         labelColor: AppColors.primary,
@@ -486,22 +357,12 @@ class AppTheme {
         ),
         dividerColor: AppColors.divider,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Progress Indicator Theme
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppColors.primary,
         linearTrackColor: AppColors.surfaceVariant,
         circularTrackColor: AppColors.surfaceVariant,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Switch Theme
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -517,11 +378,6 @@ class AppTheme {
           return AppColors.border;
         }),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Checkbox Theme
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
@@ -535,11 +391,6 @@ class AppTheme {
           borderRadius: BorderRadius.circular(AppSizes.radiusSm),
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Radio Theme
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
@@ -549,21 +400,11 @@ class AppTheme {
           return AppColors.textTertiary;
         }),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Icon Theme
       iconTheme: const IconThemeData(
         color: AppColors.textPrimary,
         size: 24,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Primary Icon Theme
       primaryIconTheme: const IconThemeData(
         color: AppColors.primary,
@@ -580,11 +421,6 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       fontFamily: 'Manrope',
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Color Scheme
       colorScheme: ColorScheme.dark(
         // Primary colors
@@ -592,55 +428,25 @@ class AppTheme {
         onPrimary: AppColors.textPrimary,
         primaryContainer: AppColors.accent1,
         onPrimaryContainer: AppColors.accent1,
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Secondary colors
         secondary: AppColors.accent2,
         onSecondary: AppColors.textPrimary,
         secondaryContainer: AppColors.accent2,
         onSecondaryContainer: AppColors.accent2,
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Tertiary colors
         tertiary: AppColors.accent3,
         onTertiary: AppColors.textPrimary,
         tertiaryContainer: AppColors.accent3,
         onTertiaryContainer: AppColors.accent3,
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Error colors
         error: AppColors.errorLight,
         onError: AppColors.textPrimary,
         errorContainer: AppColors.errorContainerDark,
         onErrorContainer: AppColors.errorLight,
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Surface colors
         surface: AppColors.darkSurface,
         onSurface: AppColors.darkTextPrimary,
         surfaceContainerHighest: AppColors.darkSurfaceContainerHigh,
-<<<<<<< HEAD
-        
-        // Background
-        surfaceTint: AppColors.accent1.withAlpha(12),
-        
-        // Outline
-        outline: AppColors.darkBorder,
-        outlineVariant: AppColors.darkBorderLight,
-        
-=======
 
         // Background
         surfaceTint: AppColors.accent1.withAlpha(12),
@@ -649,31 +455,18 @@ class AppTheme {
         outline: AppColors.darkBorder,
         outlineVariant: AppColors.darkBorderLight,
 
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Inverse
         inverseSurface: AppColors.darkTextPrimary,
         onInverseSurface: AppColors.darkBackground,
         inversePrimary: AppColors.primary,
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         // Shadow & scrim
         shadow: Colors.black45,
         scrim: AppColors.scrimDark,
       ),
-<<<<<<< HEAD
-      
-      // Scaffold
-      scaffoldBackgroundColor: AppColors.background,
-      
-=======
 
       // Scaffold
       scaffoldBackgroundColor: AppColors.background,
 
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // AppBar Theme
       appBarTheme: AppBarTheme(
         elevation: 0,
@@ -693,17 +486,10 @@ class AppTheme {
           size: 24,
         ),
       ),
-<<<<<<< HEAD
-      
-      // Text Theme
-      textTheme: _buildDarkTextTheme(),
-      
-=======
 
       // Text Theme
       textTheme: _buildDarkTextTheme(),
 
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Elevated Button Theme
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -723,11 +509,6 @@ class AppTheme {
           ),
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Filled Button Theme (Material 3)
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -745,11 +526,6 @@ class AppTheme {
           ),
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Outlined Button Theme
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
@@ -767,11 +543,6 @@ class AppTheme {
           ),
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Text Button Theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -787,11 +558,6 @@ class AppTheme {
           ),
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -839,11 +605,6 @@ class AppTheme {
         prefixIconColor: AppColors.darkTextSecondary,
         suffixIconColor: AppColors.darkTextSecondary,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Card Theme
       cardTheme: CardThemeData(
         color: AppColors.darkSurface,
@@ -854,11 +615,6 @@ class AppTheme {
         ),
         clipBehavior: Clip.antiAlias,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Bottom Navigation Bar Theme
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.darkSurface,
@@ -875,11 +631,6 @@ class AppTheme {
           fontWeight: FontWeight.w500,
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Navigation Bar Theme (Material 3)
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.darkSurface,
@@ -913,11 +664,6 @@ class AppTheme {
           );
         }),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Floating Action Button Theme
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.accent1,
@@ -928,11 +674,6 @@ class AppTheme {
         highlightElevation: 2,
         shape: CircleBorder(),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Chip Theme
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.darkSurfaceVariant,
@@ -948,33 +689,19 @@ class AppTheme {
           fontWeight: FontWeight.w500,
           color: AppColors.darkTextPrimary,
         ),
-<<<<<<< HEAD
-        padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.xs),
-=======
         padding: const EdgeInsets.symmetric(
             horizontal: AppSizes.sm, vertical: AppSizes.xs),
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusFull),
         ),
         side: BorderSide.none,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Divider Theme
       dividerTheme: const DividerThemeData(
         color: AppColors.darkDivider,
         thickness: 1,
         space: 1,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Bottom Sheet Theme
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.darkSurface,
@@ -987,11 +714,6 @@ class AppTheme {
         showDragHandle: true,
         dragHandleColor: AppColors.darkBorder,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Dialog Theme
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.darkSurface,
@@ -1009,11 +731,6 @@ class AppTheme {
           color: AppColors.darkTextSecondary,
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Snackbar Theme
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.darkSurfaceContainerHigh,
@@ -1027,11 +744,6 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
         elevation: 3,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Tab Bar Theme
       tabBarTheme: TabBarThemeData(
         labelColor: AppColors.accent1,
@@ -1049,22 +761,12 @@ class AppTheme {
         ),
         dividerColor: AppColors.darkDivider,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Progress Indicator Theme
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppColors.accent1,
         linearTrackColor: AppColors.darkSurfaceVariant,
         circularTrackColor: AppColors.darkSurfaceVariant,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Switch Theme
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -1080,11 +782,6 @@ class AppTheme {
           return AppColors.darkBorder;
         }),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Checkbox Theme
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
@@ -1098,11 +795,6 @@ class AppTheme {
           borderRadius: BorderRadius.circular(AppSizes.radiusSm),
         ),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Radio Theme
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
@@ -1112,21 +804,11 @@ class AppTheme {
           return AppColors.darkTextTertiary;
         }),
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Icon Theme
       iconTheme: const IconThemeData(
         color: AppColors.darkTextPrimary,
         size: 24,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Primary Icon Theme
       primaryIconTheme: const IconThemeData(
         color: AppColors.accent1,
@@ -1138,11 +820,6 @@ class AppTheme {
   // ============================================
   // TEXT THEMES
   // ============================================
-<<<<<<< HEAD
-  
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
   /// Build text theme for light mode
   static TextTheme _buildLightTextTheme() {
     final baseTheme = GoogleFonts.manropeTextTheme();
@@ -1163,11 +840,6 @@ class AppTheme {
         letterSpacing: -0.5,
         height: 1.3,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Headlines
       headlineLarge: baseTheme.headlineLarge?.copyWith(
         color: AppColors.textPrimary,
@@ -1184,11 +856,6 @@ class AppTheme {
         letterSpacing: -0.2,
         height: 1.4,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Titles
       titleLarge: baseTheme.titleLarge?.copyWith(
         color: AppColors.textPrimary,
@@ -1205,11 +872,6 @@ class AppTheme {
         letterSpacing: 0.2,
         height: 1.4,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Body
       bodyLarge: baseTheme.bodyLarge?.copyWith(
         color: AppColors.textPrimary,
@@ -1226,11 +888,6 @@ class AppTheme {
         letterSpacing: 0.2,
         height: 1.5,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Labels
       labelLarge: baseTheme.labelLarge?.copyWith(
         color: AppColors.textPrimary,
@@ -1270,11 +927,6 @@ class AppTheme {
         letterSpacing: -0.5,
         height: 1.3,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Headlines
       headlineLarge: baseTheme.headlineLarge?.copyWith(
         color: AppColors.darkTextPrimary,
@@ -1291,11 +943,6 @@ class AppTheme {
         letterSpacing: -0.2,
         height: 1.4,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Titles
       titleLarge: baseTheme.titleLarge?.copyWith(
         color: AppColors.darkTextPrimary,
@@ -1312,11 +959,6 @@ class AppTheme {
         letterSpacing: 0.2,
         height: 1.4,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Body
       bodyLarge: baseTheme.bodyLarge?.copyWith(
         color: AppColors.darkTextPrimary,
@@ -1333,11 +975,6 @@ class AppTheme {
         letterSpacing: 0.2,
         height: 1.5,
       ),
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       // Labels
       labelLarge: baseTheme.labelLarge?.copyWith(
         color: AppColors.darkTextPrimary,

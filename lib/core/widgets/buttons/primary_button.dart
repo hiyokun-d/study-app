@@ -11,12 +11,9 @@ class PrimaryButton extends StatefulWidget {
     this.isEnabled = true,
     this.width,
     this.height,
-<<<<<<< HEAD
-=======
     this.radius,
     this.fontSize,
     this.fontWeight,
->>>>>>> 6586c5f (Add core models and test widget for UI components)
     this.icon,
     this.iconPosition = IconPosition.left,
     this.backgroundColor,
@@ -31,12 +28,9 @@ class PrimaryButton extends StatefulWidget {
   final bool isEnabled;
   final double? width;
   final double? height;
-<<<<<<< HEAD
-=======
   final double? radius;
   final double? fontSize;
   final FontWeight? fontWeight;
->>>>>>> 6586c5f (Add core models and test widget for UI components)
   final IconData? icon;
   final IconPosition iconPosition;
   final Color? backgroundColor;
@@ -83,8 +77,6 @@ class _PrimaryButtonState extends State<PrimaryButton>
     }
   }
 
-<<<<<<< HEAD
-=======
   double get _effectiveRadius {
     if (widget.radius != null) return widget.radius!;
     switch (widget.size) {
@@ -97,7 +89,6 @@ class _PrimaryButtonState extends State<PrimaryButton>
     }
   }
 
->>>>>>> 6586c5f (Add core models and test widget for UI components)
   double get _fontSize {
     switch (widget.size) {
       case ButtonSize.small:
@@ -124,17 +115,6 @@ class _PrimaryButtonState extends State<PrimaryButton>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-<<<<<<< HEAD
-    
-    final effectiveOnPressed = widget.isEnabled && !widget.isLoading
-        ? widget.onPressed
-        : null;
-
-    final backgroundColor = widget.backgroundColor ?? 
-        (widget.isOutlined ? Colors.transparent : colorScheme.primary);
-    
-    final foregroundColor = widget.textColor ?? 
-=======
 
     final effectiveOnPressed =
         widget.isEnabled && !widget.isLoading ? widget.onPressed : null;
@@ -143,7 +123,6 @@ class _PrimaryButtonState extends State<PrimaryButton>
         (widget.isOutlined ? Colors.transparent : colorScheme.primary);
 
     final foregroundColor = widget.textColor ??
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         (widget.isOutlined ? colorScheme.primary : colorScheme.onPrimary);
 
     return GestureDetector(
@@ -176,26 +155,16 @@ class _PrimaryButtonState extends State<PrimaryButton>
                   style: OutlinedButton.styleFrom(
                     foregroundColor: foregroundColor,
                     backgroundColor: backgroundColor,
-<<<<<<< HEAD
-                    disabledForegroundColor: colorScheme.onSurface.withOpacity(0.38),
-                    side: BorderSide(
-                      color: widget.isEnabled 
-=======
                     disabledForegroundColor:
                         colorScheme.onSurface.withOpacity(0.38),
                     side: BorderSide(
                       color: widget.isEnabled
->>>>>>> 6586c5f (Add core models and test widget for UI components)
                           ? (widget.backgroundColor ?? colorScheme.primary)
                           : colorScheme.onSurface.withOpacity(0.12),
                       width: 1.5,
                     ),
                     shape: RoundedRectangleBorder(
-<<<<<<< HEAD
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-=======
                       borderRadius: BorderRadius.circular(_effectiveRadius),
->>>>>>> 6586c5f (Add core models and test widget for UI components)
                     ),
                     elevation: 0,
                   ),
@@ -206,19 +175,12 @@ class _PrimaryButtonState extends State<PrimaryButton>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: backgroundColor,
                     foregroundColor: foregroundColor,
-<<<<<<< HEAD
-                    disabledBackgroundColor: colorScheme.onSurface.withOpacity(0.12),
-                    disabledForegroundColor: colorScheme.onSurface.withOpacity(0.38),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-=======
                     disabledBackgroundColor:
                         colorScheme.onSurface.withOpacity(0.12),
                     disabledForegroundColor:
                         colorScheme.onSurface.withOpacity(0.38),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(_effectiveRadius),
->>>>>>> 6586c5f (Add core models and test widget for UI components)
                     ),
                     elevation: _isPressed ? 0 : 2,
                     shadowColor: colorScheme.shadow,
@@ -263,13 +225,10 @@ class _PrimaryButtonState extends State<PrimaryButton>
       ),
     );
 
-<<<<<<< HEAD
-=======
     final radiusWidget = widget.radius != null
         ? SizedBox(width: widget.radius)
         : const SizedBox(width: AppSizes.sm);
 
->>>>>>> 6586c5f (Add core models and test widget for UI components)
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,

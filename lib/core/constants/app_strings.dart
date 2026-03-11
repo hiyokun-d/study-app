@@ -29,25 +29,14 @@ class AppStrings {
   static const String resetPassword = 'Reset Password';
   static const String sendResetLink = 'Send Reset Link';
   static const String backToLogin = 'Back to Login';
-<<<<<<< HEAD
-  static const String passwordResetSent = 'Password reset link sent to your email';
-=======
   static const String passwordResetSent =
       'Password reset link sent to your email';
->>>>>>> 6586c5f (Add core models and test widget for UI components)
 
   // Onboarding
   static const String skip = 'Skip';
   static const String next = 'Next';
   static const String getStarted = 'Get Started';
   static const String onboardingTitle1 = 'Learn Anything You Want';
-<<<<<<< HEAD
-  static const String onboardingSubtitle1 = 'Access thousands of courses from expert freelance teachers';
-  static const String onboardingTitle2 = 'Choose Your Perfect Tutor';
-  static const String onboardingSubtitle2 = 'Browse profiles, reviews, and find the teacher that fits your style';
-  static const String onboardingTitle3 = 'Learn at Your Own Pace';
-  static const String onboardingSubtitle3 = 'Live classes, recorded sessions, or 1-on-1 tutoring - you decide';
-=======
   static const String onboardingSubtitle1 =
       'Access thousands of courses from expert freelance teachers';
   static const String onboardingTitle2 = 'Choose Your Perfect Tutor';
@@ -56,21 +45,15 @@ class AppStrings {
   static const String onboardingTitle3 = 'Learn at Your Own Pace';
   static const String onboardingSubtitle3 =
       'Live classes, recorded sessions, or 1-on-1 tutoring - you decide';
->>>>>>> 6586c5f (Add core models and test widget for UI components)
 
   // Role Selection
   static const String chooseYourRole = 'Choose Your Role';
   static const String iAmAStudent = "I'm a Student";
   static const String iAmATeacher = "I'm a Teacher";
-<<<<<<< HEAD
-  static const String studentDescription = 'Browse courses, learn from expert teachers, and track your progress';
-  static const String teacherDescription = 'Create courses, teach students, and earn money from your expertise';
-=======
   static const String studentDescription =
       'Browse courses, learn from expert teachers, and track your progress';
   static const String teacherDescription =
       'Create courses, teach students, and earn money from your expertise';
->>>>>>> 6586c5f (Add core models and test widget for UI components)
 
   // Navigation
   static const String home = 'Home';
@@ -231,12 +214,8 @@ class AppStrings {
   // Validation
   static const String fieldRequired = 'This field is required';
   static const String invalidEmail = 'Please enter a valid email';
-<<<<<<< HEAD
-  static const String passwordTooShort = 'Password must be at least 8 characters';
-=======
   static const String passwordTooShort =
       'Password must be at least 8 characters';
->>>>>>> 6586c5f (Add core models and test widget for UI components)
   static const String passwordNotMatch = 'Passwords do not match';
   static const String invalidPhone = 'Please enter a valid phone number';
 
