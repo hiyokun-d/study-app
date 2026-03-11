@@ -81,6 +81,7 @@ model profiles {
   student_rating                         Decimal?               @db.Decimal
   email                                  String?                @unique
   password                               String?
+  is_email_verified                      Boolean                @default(false)
   bookings_bookings_student_idToprofiles bookings[]             @relation("bookings_student_idToprofiles")
   bookings_bookings_tutor_idToprofiles   bookings[]             @relation("bookings_tutor_idToprofiles")
   messages_messages_from_idToprofiles    messages[]             @relation("messages_from_idToprofiles")
