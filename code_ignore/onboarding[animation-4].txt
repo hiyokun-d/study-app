@@ -16,15 +16,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  int _pageDirection = 1;
 
   late final AnimationController _pageCtrl;
-  // Icon/Title/Subtitle: slide horizontally based on page direction
-  late final Animation<double> _iconSlideT;
-  late final Animation<double> _iconFade;
-  late final Animation<double> _titleSlideT;
+  // Icon: separate X/Y for squash & stretch
+  late final Animation<double> _iconScaleY;
+  late final Animation<double> _iconScaleX;
+  late final Animation<double> _iconRotate;
+  // Title: slide up from bottom
+  late final Animation<Offset> _titleSlide;
   late final Animation<double> _titleFade;
-  late final Animation<double> _subtitleSlideT;
+  // Subtitle
+  late final Animation<Offset> _subtitleSlide;
   late final Animation<double> _subtitleFade;
 
   // NO _btnCtrl — button animates only on press via _NintendoPressButton
@@ -51,11 +53,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   final List<OnboardingPage> _pages = const [
     OnboardingPage(
-      icon: Icons.school_rounded,
-      title: 'Lern',
-      subtitle:
-          'Your personalized learning companion. Connect with expert tutors and unlock your potential.',
-    ),
+        icon: Icons.school_rounded,
+        title: 'Lern',
+        subtitle:
+            'Your personalized learning companion. Connect with expert tutors and unlock your potential.'),
     OnboardingPage(
       icon: Icons.person_search_rounded,
       title: 'Find a Tutor.',
@@ -99,17 +100,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void _setupParticles() {
     final rng = Random(7);
     _particles = List.generate(
-      10,
-      (i) => _Particle(
-        x: rng.nextDouble(),
-        y: rng.nextDouble(),
-        radius: 2.0 + rng.nextDouble() * 4.0,
-        speed: 0.025 + rng.nextDouble() * 0.04,
-        opacity: 0.06 + rng.nextDouble() * 0.12,
-        drift: (rng.nextDouble() - 0.5) * 0.4,
-        phase: rng.nextDouble() * 2 * pi,
-      ),
-    );
+        10,
+        (i) => _Particle(
+              x: rng.nextDouble(),
+              y: rng.nextDouble(),
+              radius: 2.0 + rng.nextDouble() * 4.0,
+              speed: 0.025 + rng.nextDouble() * 0.04,
+              opacity: 0.06 + rng.nextDouble() * 0.12,
+              drift: (rng.nextDouble() - 0.5) * 0.4,
+              phase: rng.nextDouble() * 2 * pi,
+            ));
     _particleCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 12),
@@ -121,41 +121,50 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 750),
     );
-    _iconSlideT = Tween<double>(begin: 0.0, end: 1.0).animate(
+
+    // ── Icon: squash on land, stretch up, settle ──
+    // ScaleY: squash flat → spring tall → settle at 1.0
+    _iconScaleY = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.0, 0.55, curve: Curves.easeOutCubic),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.0, 0.80, curve: _SquashStretchY())),
     );
-    _iconFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+    // ScaleX: inverse — wide when short, narrow when tall
+    _iconScaleX = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.0, 0.35, curve: Curves.easeOut),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.0, 0.80, curve: _SquashStretchX())),
     );
-    _titleSlideT = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _iconRotate = Tween<double>(begin: -0.10, end: 0.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.15, 0.65, curve: Curves.easeOutCubic),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack)),
     );
+
+    // ── Title: slides up from bottom same as subtitle, slightly less delay ──
+    _titleSlide = Tween<Offset>(
+      begin: const Offset(0.0, 0.45),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _pageCtrl,
+        curve: const Interval(0.18, 0.65, curve: Curves.easeOutCubic)));
     _titleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.16, 0.42, curve: Curves.easeOut),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.16, 0.42, curve: Curves.easeOut)),
     );
-    _subtitleSlideT = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
+
+    // ── Subtitle: fades + rises after title ──
+    _subtitleSlide = Tween<Offset>(
+      begin: const Offset(0.0, 0.4),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
         parent: _pageCtrl,
-        curve: const Interval(0.35, 0.82, curve: Curves.easeOutCubic),
-      ),
-    );
+        curve: const Interval(0.38, 0.82, curve: Curves.easeOutCubic)));
     _subtitleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.33, 0.65, curve: Curves.easeOut),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.33, 0.65, curve: Curves.easeOut)),
     );
   }
 
@@ -167,75 +176,64 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // Phase 1 (0–40%): white circle sweeps across screen
     _outroExpand = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.0, 0.40, curve: Curves.easeInOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.0, 0.40, curve: Curves.easeInOut)),
     );
     // Phase 2 (38–70%): logo pops in
     _outroLogoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.38, 0.58, curve: Curves.easeOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.38, 0.58, curve: Curves.easeOut)),
     );
     _outroLogoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.36, 0.60, curve: _NintendoBounce()),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.36, 0.60, curve: _NintendoBounce())),
     );
     // Phase 3 (54–100%): welcome lines stagger in
     _outroLine1Opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.54, 0.70, curve: Curves.easeOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.54, 0.70, curve: Curves.easeOut)),
     );
-    _outroLine1Slide =
-        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _outroCtrl,
-            curve: const Interval(0.54, 0.72, curve: Curves.easeOutBack),
-          ),
-        );
+    _outroLine1Slide = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _outroCtrl,
+        curve: const Interval(0.54, 0.72, curve: Curves.easeOutBack)));
     _outroLine2Opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.64, 0.78, curve: Curves.easeOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.64, 0.78, curve: Curves.easeOut)),
     );
-    _outroLine2Slide =
-        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _outroCtrl,
-            curve: const Interval(0.64, 0.80, curve: Curves.easeOutBack),
-          ),
-        );
+    _outroLine2Slide = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _outroCtrl,
+        curve: const Interval(0.64, 0.80, curve: Curves.easeOutBack)));
     _outroLine3Opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.74, 0.88, curve: Curves.easeOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.74, 0.88, curve: Curves.easeOut)),
     );
-    _outroLine3Slide =
-        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _outroCtrl,
-            curve: const Interval(0.74, 0.90, curve: Curves.easeOutBack),
-          ),
-        );
+    _outroLine3Slide = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _outroCtrl,
+        curve: const Interval(0.74, 0.90, curve: Curves.easeOutBack)));
     // Check burst (72–92%)
     _outroCheckScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.72, 0.92, curve: _NintendoBounce()),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.72, 0.92, curve: _NintendoBounce())),
     );
     _outroCheckOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.72, 0.82, curve: Curves.easeOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.72, 0.82, curve: Curves.easeOut)),
     );
   }
 
@@ -301,11 +299,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       physics: const BouncingScrollPhysics(),
                       onPageChanged: (index) {
                         if (!mounted) return;
-                        final direction = index >= _currentPage ? 1 : -1;
-                        setState(() {
-                          _pageDirection = direction;
-                          _currentPage = index;
-                        });
+                        setState(() => _currentPage = index);
                         HapticFeedback.selectionClick();
                         _runPageEntrance();
                       },
@@ -314,18 +308,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         if (index == _currentPage) {
                           return RepaintBoundary(
                             child: _buildAnimatedPage(
-                              _pages[index],
-                              theme,
-                              colorScheme,
-                            ),
+                                _pages[index], theme, colorScheme),
                           );
                         }
                         return RepaintBoundary(
                           child: _buildStaticPage(
-                            _pages[index],
-                            theme,
-                            colorScheme,
-                          ),
+                              _pages[index], theme, colorScheme),
                         );
                       },
                     ),
@@ -362,13 +350,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   }
                 : null,
             style: TextButton.styleFrom(foregroundColor: Colors.white),
-            child: const Text(
-              '< Back',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            child: const Text('< Back',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w500)),
           ),
         ),
         AnimatedOpacity(
@@ -377,13 +361,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           child: TextButton(
             onPressed: _currentPage < _pages.length - 1 ? _skip : null,
             style: TextButton.styleFrom(foregroundColor: Colors.white),
-            child: const Text(
-              'Skip',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            child: const Text('Skip',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w500)),
           ),
         ),
       ],
@@ -426,15 +406,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
     return Padding(
       padding: const EdgeInsets.all(AppSizes.lg),
-      child: _NintendoPressButton(text: label, onPressed: _nextPage),
+      child: _NintendoPressButton(
+        text: label,
+        onPressed: _nextPage,
+      ),
     );
   }
 
   Widget _buildAnimatedPage(
-    OnboardingPage page,
-    ThemeData theme,
-    ColorScheme colorScheme,
-  ) {
+      OnboardingPage page, ThemeData theme, ColorScheme colorScheme) {
     final index = _pages.indexOf(page);
     final isHero = index == 0;
 
@@ -443,18 +423,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       builder: (_, __) {
         return Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: isHero ? AppSizes.lg : AppSizes.xl,
-          ),
+              horizontal: isHero ? AppSizes.lg : AppSizes.xl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // ── Visual: illustration or icon ──
-              Opacity(
-                opacity: _iconFade.value.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(
-                    (1.0 - _iconSlideT.value) * 92 * _pageDirection,
-                    0,
+              Transform.rotate(
+                angle: _iconRotate.value,
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.diagonal3Values(
+                    _iconScaleX.value.clamp(0.0, 1.4),
+                    _iconScaleY.value.clamp(0.0, 1.4),
+                    1.0,
                   ),
                   child: _buildPageVisual(page, index),
                 ),
@@ -462,14 +443,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
               SizedBox(height: isHero ? AppSizes.lg : AppSizes.xxl),
 
-              // ── Title: slides horizontally with page direction ──
+              // ── Title: slides up from bottom ──
               Opacity(
                 opacity: _titleFade.value.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(
-                    (1.0 - _titleSlideT.value) * 70 * _pageDirection,
-                    0,
-                  ),
+                child: SlideTransition(
+                  position: _titleSlide,
                   child: _buildTitleText(page, theme),
                 ),
               ),
@@ -479,11 +457,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               // ── Subtitle ──
               Opacity(
                 opacity: _subtitleFade.value.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(
-                    (1.0 - _subtitleSlideT.value) * 56 * _pageDirection,
-                    0,
-                  ),
+                child: SlideTransition(
+                  position: _subtitleSlide,
                   child: Text(
                     page.subtitle,
                     style: theme.textTheme.bodyLarge?.copyWith(
@@ -506,16 +481,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildStaticPage(
-    OnboardingPage page,
-    ThemeData theme,
-    ColorScheme colorScheme,
-  ) {
+      OnboardingPage page, ThemeData theme, ColorScheme colorScheme) {
     final index = _pages.indexOf(page);
     final isHero = index == 0;
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isHero ? AppSizes.lg : AppSizes.xl,
-      ),
+      padding:
+          EdgeInsets.symmetric(horizontal: isHero ? AppSizes.lg : AppSizes.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -587,22 +558,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildIconContainer(OnboardingPage page, int index) {
     // Each page gets a unique icon arrangement with layered circles
     final configs = [
-      _IconConfig(Icons.school_rounded, const [
-        Color(0xFF1479FF),
-        Color(0xFF14A5FF),
-      ]),
-      _IconConfig(Icons.person_search_rounded, const [
-        Color(0xFF1479FF),
-        Color(0xFF14A5FF),
-      ]),
-      _IconConfig(Icons.verified_rounded, const [
-        Color(0xFF1479FF),
-        Color(0xFF14A5FF),
-      ]),
-      _IconConfig(Icons.auto_stories_rounded, const [
-        Color(0xFF1479FF),
-        Color(0xFF14A5FF),
-      ]),
+      _IconConfig(
+          Icons.school_rounded, const [Color(0xFF1479FF), Color(0xFF14A5FF)]),
+      _IconConfig(Icons.person_search_rounded,
+          const [Color(0xFF6C63FF), Color(0xFF9B8FFF)]),
+      _IconConfig(
+          Icons.verified_rounded, const [Color(0xFF0BA84A), Color(0xFF34D399)]),
+      _IconConfig(Icons.auto_stories_rounded,
+          const [Color(0xFFE85D04), Color(0xFFFB923C)]),
     ];
     final cfg = configs[index.clamp(0, configs.length - 1)];
 
@@ -697,11 +660,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               end: Alignment.bottomRight,
                             ),
                           ),
-                          child: const Icon(
-                            Icons.school_rounded,
-                            size: 46,
-                            color: Colors.white,
-                          ),
+                          child: const Icon(Icons.school_rounded,
+                              size: 46, color: Colors.white),
                         ),
                       ),
                     ),
@@ -815,10 +775,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: AnimatedBuilder(
         animation: _particleCtrl,
         builder: (_, __) => CustomPaint(
-          painter: _ParticlePainter(
-            particles: _particles,
-            t: _particleCtrl.value,
-          ),
+          painter:
+              _ParticlePainter(particles: _particles, t: _particleCtrl.value),
           size: Size.infinite,
         ),
       ),
@@ -859,7 +817,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 // ─────────────────────────────────────────────────────────────
 
 class _NintendoPressButton extends StatefulWidget {
-  const _NintendoPressButton({required this.text, required this.onPressed});
+  const _NintendoPressButton({
+    required this.text,
+    required this.onPressed,
+  });
   final String text;
   final VoidCallback onPressed;
 
@@ -885,14 +846,12 @@ class _NintendoPressButtonState extends State<_NintendoPressButton>
       reverseDuration: const Duration(milliseconds: 420),
     );
 
-    _scaleX = Tween<double>(
-      begin: 1.0,
-      end: 1.07,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
-    _scaleY = Tween<double>(
-      begin: 1.0,
-      end: 0.91,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
+    _scaleX = Tween<double>(begin: 1.0, end: 1.07).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeIn),
+    );
+    _scaleY = Tween<double>(begin: 1.0, end: 0.91).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeIn),
+    );
   }
 
   @override
@@ -959,6 +918,33 @@ class _NintendoBounce extends Curve {
   }
 }
 
+/// Icon scaleY: squash down → spring tall → settle
+/// Simulates hitting the ground and bouncing straight up
+class _SquashStretchY extends Curve {
+  const _SquashStretchY();
+  @override
+  double transformInternal(double t) {
+    if (t < 0.12) return (t / 0.12) * 0.65; // slam flat fast
+    if (t < 0.38) return 0.65 + (t - 0.12) / 0.26 * 0.68; // spring tall → 1.33
+    if (t < 0.58) return 1.33 - (t - 0.38) / 0.20 * 0.25; // → 1.08
+    if (t < 0.76) return 1.08 - (t - 0.58) / 0.18 * 0.12; // → 0.96
+    return 0.96 + (t - 0.76) / 0.24 * 0.04; // settle → 1.0
+  }
+}
+
+/// Icon scaleX: inverse of Y (conservation of volume feel)
+class _SquashStretchX extends Curve {
+  const _SquashStretchX();
+  @override
+  double transformInternal(double t) {
+    if (t < 0.12) return (t / 0.12) * 1.32; // slam wide fast
+    if (t < 0.38) return 1.32 - (t - 0.12) / 0.26 * 0.48; // → 0.84
+    if (t < 0.58) return 0.84 + (t - 0.38) / 0.20 * 0.14; // → 0.98
+    if (t < 0.76) return 0.98 + (t - 0.58) / 0.18 * 0.05; // → 1.03
+    return 1.03 - (t - 0.76) / 0.24 * 0.03; // settle → 1.0
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Painters
 // ─────────────────────────────────────────────────────────────
@@ -968,11 +954,8 @@ class _CircleExpandPainter extends CustomPainter {
   final double radius;
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawCircle(
-      Offset(size.width / 2, size.height / 2),
-      radius,
-      Paint()..color = Colors.white,
-    );
+    canvas.drawCircle(Offset(size.width / 2, size.height / 2), radius,
+        Paint()..color = Colors.white);
   }
 
   @override
@@ -992,10 +975,8 @@ class _ParticlePainter extends CustomPainter {
           .clamp(0.0, size.width);
       final y = ((p.y - progress * 0.1) % 1.0) * size.height;
       final opacity =
-          (p.opacity * (0.5 + 0.5 * sin(p.phase + progress * 2 * pi))).clamp(
-            0.0,
-            1.0,
-          );
+          (p.opacity * (0.5 + 0.5 * sin(p.phase + progress * 2 * pi)))
+              .clamp(0.0, 1.0);
       paint.color = Color.fromRGBO(255, 255, 255, opacity);
       canvas.drawCircle(Offset(x, y), p.radius, paint);
     }
@@ -1095,7 +1076,11 @@ class _HeroIllustrationPainter extends CustomPainter {
 
     // screen avatar circle
     paint.color = const Color(0xFF1479FF).withOpacity(0.35);
-    canvas.drawCircle(Offset(w * 0.355, h * 0.315), h * 0.028, paint);
+    canvas.drawCircle(
+      Offset(w * 0.355, h * 0.315),
+      h * 0.028,
+      paint,
+    );
 
     // ── Floating book card (left) ──
     paint
@@ -1133,11 +1118,7 @@ class _HeroIllustrationPainter extends CustomPainter {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(
-            w * 0.07,
-            h * 0.37 + i * h * 0.055,
-            w * 0.10,
-            h * 0.018,
-          ),
+              w * 0.07, h * 0.37 + i * h * 0.055, w * 0.10, h * 0.018),
           const Radius.circular(3),
         ),
         paint,
@@ -1162,11 +1143,7 @@ class _HeroIllustrationPainter extends CustomPainter {
     );
     // star
     _drawStar(
-      canvas,
-      Offset(w * 0.89, h * 0.36),
-      h * 0.042,
-      const Color(0xFFFFB800),
-    );
+        canvas, Offset(w * 0.89, h * 0.36), h * 0.042, const Color(0xFFFFB800));
 
     // ── Floating chat bubble (top center) ──
     paint.color = const Color(0xFF1479FF);
@@ -1254,13 +1231,8 @@ class OnboardingPage {
 }
 
 class GradientText extends StatelessWidget {
-  const GradientText(
-    this.text, {
-    super.key,
-    required this.gradient,
-    this.style,
-    this.textAlign,
-  });
+  const GradientText(this.text,
+      {super.key, required this.gradient, this.style, this.textAlign});
   final String text;
   final TextStyle? style;
   final Gradient gradient;
