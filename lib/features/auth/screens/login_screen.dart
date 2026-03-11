@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
-import '../../../core/widgets/buttons/social_auth_button.dart';
 import '../../../core/widgets/inputs/text_input.dart';
 import '../../../core/widgets/inputs/password_text_field.dart';
-import '../../../core/constants/app_assets.dart';
 
-/// Modern login screen with theme-aware styling
+/// Login screen - Access Account design
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -19,6 +19,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  bool _agreedToTerms = true;
   bool _isLoading = false;
 
   @override
@@ -29,12 +31,21 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() {
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please agree to the Terms of Service and Privacy Policy'),
+        ),
+      );
+      return;
+    }
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      // Simulate login
-      Future.delayed(const Duration(seconds: 1), () {
-        setState(() => _isLoading = false);
-        Navigator.of(context).pushReplacementNamed('/student-dashboard');
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          Navigator.of(context).pushReplacementNamed('/student-dashboard');
+        }
       });
     }
   }
@@ -42,181 +53,340 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSizes.lg),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: AppSizes.xl),
-                
-                // Header
-                Text(
-                  'Welcome Back',
-                  style: textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurface,
-                  ),
+      backgroundColor: AppColors.info,
+      body: Column(
+        children: [
+          // ── Blue header area ──────────────────────────────────
+          SizedBox(height: MediaQuery.of(context).padding.top + AppSizes.md),
+
+          // ── White card body ───────────────────────────────────
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(24),
                 ),
-                
-                const SizedBox(height: AppSizes.sm),
-                
-                Text(
-                  'Sign in to continue your learning journey',
-                  style: textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSizes.lg,
+                  AppSizes.xl,
+                  AppSizes.lg,
+                  AppSizes.lg,
                 ),
-                
-                const SizedBox(height: AppSizes.xxl),
-                
-                // Email Input
-                TextInput(
-                  controller: _emailController,
-                  label: AppStrings.email,
-                  hint: 'Enter your email',
-                  prefixIcon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                
-                const SizedBox(height: AppSizes.md),
-                
-                // Password Input
-                PasswordTextField(
-                  controller: _passwordController,
-                  label: AppStrings.password,
-                  hint: 'Enter your password',
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                
-                // Forgot Password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      // Navigate to forgot password
-                    },
-                    child: Text(
-                      'Forgot Password?',
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: AppSizes.lg),
-                
-                // Login Button
-                PrimaryButton(
-                  text: AppStrings.login,
-                  onPressed: _login,
-                  isLoading: _isLoading,
-                ),
-                
-                const SizedBox(height: AppSizes.xl),
-                
-                // Divider
-                Row(
-                  children: [
-                    Expanded(
-                      child: Divider(
-                        color: colorScheme.outlineVariant,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
-                      child: Text(
-                        'Or continue with',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Title ─────────────────────────────────
+                      Center(
+                        child: Column(
+                          children: [
+                            Text(
+                              'Access Account',
+                              style: textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.info,
+                              ),
+                            ),
+                            const SizedBox(height: AppSizes.xs),
+                            Text(
+                              'Log in to continue your learning journey',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Divider(
-                        color: colorScheme.outlineVariant,
+
+                      const SizedBox(height: AppSizes.lg),
+                      const Divider(color: AppColors.divider),
+                      const SizedBox(height: AppSizes.lg),
+
+                      // ── Email Input ───────────────────────────
+                      _buildLabel(AppStrings.email),
+                      const SizedBox(height: AppSizes.xs),
+                      TextInput(
+                        controller: _emailController,
+                        hint: 'Enter your email',
+                        prefixIcon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        borderColor: AppColors.info,
+                        borderRadius: AppSizes.radiusFull,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return AppStrings.fieldRequired;
+                          }
+                          if (!value.contains('@')) {
+                            return AppStrings.invalidEmail;
+                          }
+                          return null;
+                        },
                       ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: AppSizes.xl),
-                
-                // Social Login Buttons
-                Column(
-                  children: [
-                    SocialAuthButton(
-                      label: 'Continue with Google',
-                      icon: Image.asset(AppAssets.googleIcon),
-                      onPressed: () {}, onApplePressed: () {  }, onGooglePressed: () {  }, googleButtonText: '', appleButtonText: '',
-                    ),
-                    const SizedBox(height: AppSizes.md),
-                    SocialAuthButton(
-                      label: 'Continue with Apple',
-                      icon: Image.asset(AppAssets.appleIcon),
-                      onPressed: () {}, onApplePressed: () {  }, onGooglePressed: () {  }, googleButtonText: '', appleButtonText: '',
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: AppSizes.xxl),
-                
-                // Register Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Don't have an account? ",
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+
+                      const SizedBox(height: AppSizes.md),
+
+                      // ── Password Input ────────────────────────
+                      _buildLabel(AppStrings.password),
+                      const SizedBox(height: AppSizes.xs),
+                      PasswordTextField(
+                        controller: _passwordController,
+                        hint: 'Enter your password',
+                        textInputAction: TextInputAction.done,
+                        borderColor: AppColors.info,
+                        borderRadius: AppSizes.radiusFull,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return AppStrings.fieldRequired;
+                          }
+                          if (value.length < 6) {
+                            return AppStrings.passwordTooShort;
+                          }
+                          return null;
+                        },
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).pushNamed('/register');
-                      },
-                      child: Text(
-                        AppStrings.register,
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
+
+                      // ── Forgot Password ───────────────────────
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {},
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.info,
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            AppStrings.forgotPassword,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: AppColors.info,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: AppSizes.md),
+
+                      // ── Or sign in with ───────────────────────
+                      Row(
+                        children: [
+                          const Expanded(child: Divider(color: AppColors.divider)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSizes.md,
+                            ),
+                            child: Text(
+                              AppStrings.orSignInWith,
+                              style: textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          const Expanded(child: Divider(color: AppColors.divider)),
+                        ],
+                      ),
+
+                      const SizedBox(height: AppSizes.lg),
+
+                      // ── Social Buttons ────────────────────────
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _SocialIconButton(
+                            onPressed: () {},
+                            child: const _GoogleLogo(),
+                          ),
+                          const SizedBox(width: AppSizes.md),
+                          _SocialIconButton(
+                            onPressed: () {},
+                            child: const _AppleLogo(),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: AppSizes.lg),
+                      const Divider(color: AppColors.divider),
+                      const SizedBox(height: AppSizes.md),
+
+                      // ── Terms Checkbox ────────────────────────
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: Checkbox(
+                              value: _agreedToTerms,
+                              onChanged: (v) =>
+                                  setState(() => _agreedToTerms = v ?? false),
+                              activeColor: AppColors.info,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSizes.sm),
+                          Expanded(
+                            child: RichText(
+                              text: TextSpan(
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                                children: [
+                                  const TextSpan(text: 'I agree to the '),
+                                  TextSpan(
+                                    text: AppStrings.termsOfService,
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: AppColors.info,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const TextSpan(text: ' and '),
+                                  TextSpan(
+                                    text: AppStrings.privacyPolicy,
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: AppColors.info,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: AppSizes.xl),
+
+                      // ── Login Button ──────────────────────────
+                      PrimaryButton(
+                        text: AppStrings.login,
+                        onPressed: _agreedToTerms ? _login : null,
+                        isLoading: _isLoading,
+                        radius: AppSizes.radiusFull,
+                        size: ButtonSize.large,
+                      ),
+
+                      const SizedBox(height: AppSizes.lg),
+
+                      // ── Sign Up Link ──────────────────────────
+                      Center(
+                        child: RichText(
+                          text: TextSpan(
+                            style: textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                            children: [
+                              TextSpan(text: '${AppStrings.noAccount} '),
+                              WidgetSpan(
+                                child: GestureDetector(
+                                  onTap: () => Navigator.of(context)
+                                      .pushReplacementNamed('/register'),
+                                  child: Text(
+                                    AppStrings.signUp,
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: AppColors.info,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: AppSizes.md),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
+  Widget _buildLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: AppColors.info,
+      ),
+    );
+  }
+}
+
+// ── Google Logo ───────────────────────────────────────────────────────────────
+
+class _GoogleLogo extends StatelessWidget {
+  const _GoogleLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    return const FaIcon(
+      FontAwesomeIcons.google,
+      size: 26,
+      color: Color(0xFF4285F4),
+    );
+  }
+}
+
+// ── Apple Logo ────────────────────────────────────────────────────────────────
+
+class _AppleLogo extends StatelessWidget {
+  const _AppleLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    return const FaIcon(
+      FontAwesomeIcons.apple,
+      size: 28,
+      color: Colors.black,
+    );
+  }
+}
+
+// ── Social Icon Button ────────────────────────────────────────────────────────
+
+class _SocialIconButton extends StatelessWidget {
+  const _SocialIconButton({
+    required this.onPressed,
+    required this.child,
+  });
+
+  final VoidCallback onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+          border: Border.all(color: AppColors.info, width: 1.5),
+        ),
+        child: Center(child: child),
+      ),
+    );
+  }
 }

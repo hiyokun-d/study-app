@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'text_input.dart';
 
 /// Password text field with built-in visibility toggle.
@@ -22,6 +21,8 @@ class PasswordTextField extends StatefulWidget {
     this.autofocus = false,
     this.validator,
     this.size = InputSize.medium,
+    this.borderColor, 
+    this.borderRadius, 
   });
 
   final TextEditingController? controller;
@@ -40,6 +41,8 @@ class PasswordTextField extends StatefulWidget {
   final bool autofocus;
   final String? Function(String?)? validator;
   final InputSize size;
+  final Color? borderColor; 
+  final double? borderRadius; 
 
   @override
   State<PasswordTextField> createState() => _PasswordTextFieldState();
@@ -80,7 +83,8 @@ class _PasswordTextFieldState extends State<PasswordTextField> {
       validator: widget.validator,
       size: widget.size,
       showBorder: true,
+      borderColor: widget.borderColor, 
+      borderRadius: widget.borderRadius, 
     );
   }
 }
-

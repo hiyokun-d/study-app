@@ -32,6 +32,7 @@ class TextInput extends StatelessWidget {
     this.initialValue,
     this.fillColor,
     this.borderColor,
+    this.borderRadius, 
     this.validator,
     this.size = InputSize.medium,
     this.showBorder = true,
@@ -63,18 +64,10 @@ class TextInput extends StatelessWidget {
   final String? initialValue;
   final Color? fillColor;
   final Color? borderColor;
+  final double? borderRadius; 
   final String? Function(String?)? validator;
   final InputSize size;
   final bool showBorder;
-
-  double get _inputHeight {
-    switch (size) {
-      case InputSize.small:
-        return AppSizes.inputHeightSm;
-      case InputSize.medium:
-        return AppSizes.inputHeight;
-    }
-  }
 
   double get _contentPadding {
     switch (size) {
@@ -87,12 +80,15 @@ class TextInput extends StatelessWidget {
 
   double get _fontSize => size == InputSize.small ? 14 : 16;
 
+  
+  double get _effectiveRadius => borderRadius ?? AppSizes.radiusMd;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-    
+
     final effectiveFillColor = fillColor ?? colorScheme.surface;
     final effectiveBorderColor = borderColor ?? colorScheme.outline;
 
@@ -104,7 +100,7 @@ class TextInput extends StatelessWidget {
           Text(
             label!,
             style: textTheme.titleSmall?.copyWith(
-              color: enabled 
+              color: enabled
                   ? colorScheme.onSurface
                   : colorScheme.onSurface.withOpacity(0.5),
             ),
@@ -132,7 +128,7 @@ class TextInput extends StatelessWidget {
           validator: validator,
           style: textTheme.bodyLarge?.copyWith(
             fontSize: _fontSize,
-            color: enabled 
+            color: enabled
                 ? colorScheme.onSurface
                 : colorScheme.onSurface.withOpacity(0.5),
           ),
@@ -150,9 +146,11 @@ class TextInput extends StatelessWidget {
                 ? Icon(
                     prefixIcon,
                     size: _fontSize + 4,
-                    color: enabled 
-                        ? colorScheme.onSurfaceVariant
-                        : colorScheme.onSurface.withOpacity(0.38),
+                    color: borderColor != null
+                        ? borderColor
+                        : enabled
+                            ? colorScheme.onSurfaceVariant
+                            : colorScheme.onSurface.withOpacity(0.38),
                   )
                 : null,
             suffixIcon: suffixIcon != null
@@ -160,44 +158,49 @@ class TextInput extends StatelessWidget {
                     icon: Icon(
                       suffixIcon,
                       size: _fontSize + 4,
-                      color: enabled 
-                          ? colorScheme.onSurfaceVariant
-                          : colorScheme.onSurface.withOpacity(0.38),
+                      color: borderColor != null
+                          ? borderColor
+                          : enabled
+                              ? colorScheme.onSurfaceVariant
+                              : colorScheme.onSurface.withOpacity(0.38),
                     ),
                     onPressed: onSuffixIconPressed,
                   )
                 : null,
             border: showBorder
                 ? OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderRadius: BorderRadius.circular(_effectiveRadius),
                     borderSide: BorderSide(color: effectiveBorderColor),
                   )
                 : OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderRadius: BorderRadius.circular(_effectiveRadius),
                     borderSide: BorderSide.none,
                   ),
             enabledBorder: showBorder
                 ? OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    borderSide: BorderSide(color: effectiveBorderColor),
+                    borderRadius: BorderRadius.circular(_effectiveRadius),
+                    borderSide: BorderSide(
+                      color: effectiveBorderColor,
+                      width: 1.5,
+                    ),
                   )
                 : OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderRadius: BorderRadius.circular(_effectiveRadius),
                     borderSide: BorderSide.none,
                   ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              borderRadius: BorderRadius.circular(_effectiveRadius),
               borderSide: BorderSide(
-                color: colorScheme.primary,
+                color: borderColor ?? colorScheme.primary,
                 width: 2,
               ),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              borderRadius: BorderRadius.circular(_effectiveRadius),
               borderSide: BorderSide(color: colorScheme.error),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              borderRadius: BorderRadius.circular(_effectiveRadius),
               borderSide: BorderSide(
                 color: colorScheme.error,
                 width: 2,
@@ -205,13 +208,13 @@ class TextInput extends StatelessWidget {
             ),
             disabledBorder: showBorder
                 ? OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderRadius: BorderRadius.circular(_effectiveRadius),
                     borderSide: BorderSide(
                       color: colorScheme.onSurface.withOpacity(0.12),
                     ),
                   )
                 : OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderRadius: BorderRadius.circular(_effectiveRadius),
                     borderSide: BorderSide.none,
                   ),
             hintStyle: textTheme.bodyMedium?.copyWith(
