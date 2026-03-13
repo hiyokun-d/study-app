@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
@@ -20,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  bool _agreedToTerms = true;
+  bool _agreedToTerms = false;
   bool _isLoading = false;
 
   @override
@@ -34,7 +35,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please agree to the Terms of Service and Privacy Policy'),
+          content:
+              Text('Please agree to the Terms of Service and Privacy Policy'),
         ),
       );
       return;
@@ -47,6 +49,22 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.of(context).pushReplacementNamed('/student-dashboard');
         }
       });
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser != null) {
+        // Navigate to the next screen or handle the signed-in user
+        Navigator.of(context).pushReplacementNamed('/student-dashboard');
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to sign in with Google: $error'),
+        ),
+      );
     }
   }
 
@@ -179,7 +197,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       // ── Or sign in with ───────────────────────
                       Row(
                         children: [
-                          const Expanded(child: Divider(color: AppColors.divider)),
+                          const Expanded(
+                              child: Divider(color: AppColors.divider)),
                           Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: AppSizes.md,
@@ -191,7 +210,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          const Expanded(child: Divider(color: AppColors.divider)),
+                          const Expanded(
+                              child: Divider(color: AppColors.divider)),
                         ],
                       ),
 
@@ -202,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _SocialIconButton(
-                            onPressed: () {},
+                            onPressed: _handleGoogleSignIn,
                             child: const _GoogleLogo(),
                           ),
                           const SizedBox(width: AppSizes.md),

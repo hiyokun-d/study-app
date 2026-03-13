@@ -1,11 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/inputs/text_input.dart';
 import '../../../core/widgets/inputs/password_text_field.dart';
+import '../../../core/constants/app_config.dart';
 
 /// Register screen - same design as login page
 class RegisterScreen extends StatefulWidget {
@@ -17,67 +22,124 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  bool _acceptTerms = true;
+  bool _acceptTerms = false;
   bool _isLoading = false;
-  String _selectedRole = 'student';
-  DateTime? _selectedDate;
 
   @override
   void dispose() {
-    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime(2000),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context)
-                .colorScheme
-                .copyWith(primary: AppColors.info),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) setState(() => _selectedDate = picked);
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-  }
-
-  void _register() {
+  // REGISTER DARI BIASA METHOD
+  Future<void> _register() async {
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please agree to the Terms of Service and Privacy Policy'),
+          content:
+              Text('Please agree to the Terms of Service and Privacy Policy'),
         ),
       );
       return;
     }
+
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      Future.delayed(const Duration(seconds: 1), () {
+
+      // TODO: Replace this delay with your actual NestJS HTTP POST request!
+      try {
+        final response = await post(
+          Uri.parse('${AppConfig.API_URL}/auth/signup'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': _emailController.text,
+            'password': _passwordController.text,
+          }),
+        );
+
         if (!mounted) return;
-        setState(() => _isLoading = false);
-        Navigator.of(context).pushReplacementNamed('/login');
-      });
+        final responseData = jsonDecode(response.body);
+        print(responseData);
+
+        // remove this later if we done in here
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Account created successfully, NOW TRY TO LOGIN!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // TODO: CHANGE THIS LATER INTO UPDATE_PROFILE_SCREEN YOU PIECE OF SHIT
+          Navigator.of(context).pushReplacementNamed('/update-profile');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(responseData['message'] ??
+                  "Registration Failed, try again later"),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        print("Register error (something error with the API): $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Something went wrong. Please try again later.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+      // Future.delayed(const Duration(seconds: 1), () {
+      //   if (!mounted) return;
+      //   setState(() => _isLoading = false);
+      //   Navigator.of(context).pushReplacementNamed('/login');
+      // });
     }
   }
+
+  // Future<void> _handleGoogleSignIn() async {
+  //   if (!_acceptTerms) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content:
+  //             Text('Please agree to the Terms of Service and Privacy Policy'),
+  //       ),
+  //     );
+  //     return;
+  //   }
+
+  //   try {
+  //     final GoogleSignIn googleSignInMethod = GoogleSignIn();
+  //     final GoogleSignInAccount? googleUser =
+  //         await googleSignInMethod.signOut();
+
+  //     final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+  //     final String? idToken = googleAuth.idToken;
+
+  //     if (googleUser != null) {
+  //       print(googleUser.email);
+  //       Navigator.of(context).pushReplacementNamed('/student-dashboard');
+  //     }
+  //   } catch (error) {
+  //     print("Google Sign-In Error: $error");
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text('Failed to sign in with Google. Please try again.'),
+  //         backgroundColor: Colors.redAccent,
+  //       ),
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -88,9 +150,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       backgroundColor: AppColors.info,
       body: Column(
         children: [
-          // ── Blue header area ──────────────────────────────────
-          SizedBox(height: MediaQuery.of(context).padding.top + AppSizes.md),
-
           // ── White card body ───────────────────────────────────
           Expanded(
             child: Container(
@@ -123,7 +182,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 color: AppColors.info,
                               ),
                             ),
-                            const SizedBox(height: AppSizes.xs),
                             Text(
                               'Sign up to start your learning journey',
                               style: textTheme.bodyMedium?.copyWith(
@@ -131,123 +189,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                           ],
-                        ),
-                      ),
-
-                      const SizedBox(height: AppSizes.lg),
-                      const Divider(color: AppColors.divider),
-                      const SizedBox(height: AppSizes.lg),
-
-                      // ── Role Selection ────────────────────────
-                      _buildLabel('I start as a...'),
-                      const SizedBox(height: AppSizes.sm),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildRoleCard(
-                              role: 'student',
-                              icon: Icons.school_rounded,
-                              label: 'Student',
-                            ),
-                          ),
-                          const SizedBox(width: AppSizes.md),
-                          Expanded(
-                            child: _buildRoleCard(
-                              role: 'teacher',
-                              icon: Icons.person_rounded,
-                              label: 'Teacher',
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: AppSizes.md),
-
-                      // ── Full Name ─────────────────────────────
-                      _buildLabel(AppStrings.fullName),
-                      const SizedBox(height: AppSizes.xs),
-                      TextInput(
-                        controller: _nameController,
-                        hint: 'Enter your full name',
-                        prefixIcon: Icons.person_outline,
-                        textCapitalization: TextCapitalization.words,
-                        textInputAction: TextInputAction.next,
-                        borderColor: AppColors.info,
-                        borderRadius: AppSizes.radiusFull,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return AppStrings.fieldRequired;
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: AppSizes.md),
-
-                      // ── Date of Birth ─────────────────────────
-                      _buildLabel('Date of Birth'),
-                      const SizedBox(height: AppSizes.xs),
-                      GestureDetector(
-                        onTap: _pickDate,
-                        child: AbsorbPointer(
-                          child: TextFormField(
-                            readOnly: true,
-                            style: const TextStyle(fontSize: 15),
-                            decoration: InputDecoration(
-                              hintText: 'DD/MM/YYYY',
-                              hintStyle: const TextStyle(
-                                color: AppColors.textTertiary,
-                                fontSize: 14,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.cake_outlined,
-                                color: AppColors.info,
-                                size: 20,
-                              ),
-                              suffixIcon: const Icon(
-                                Icons.calendar_today_outlined,
-                                color: AppColors.info,
-                                size: 18,
-                              ),
-                              filled: true,
-                              fillColor: AppColors.surface,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSizes.md,
-                                vertical: AppSizes.md,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                                borderSide: const BorderSide(
-                                    color: AppColors.info, width: 1.5),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                                borderSide: const BorderSide(
-                                    color: AppColors.info, width: 2),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                                borderSide: const BorderSide(
-                                    color: Colors.red, width: 1.5),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                                borderSide: const BorderSide(
-                                    color: Colors.red, width: 2),
-                              ),
-                            ),
-                            controller: TextEditingController(
-                              text: _selectedDate != null
-                                  ? _formatDate(_selectedDate!)
-                                  : '',
-                            ),
-                            validator: (_) {
-                              if (_selectedDate == null) {
-                                return 'Please select your date of birth';
-                              }
-                              return null;
-                            },
-                          ),
                         ),
                       ),
 
@@ -324,7 +265,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       // ── Or sign up with ───────────────────────
                       Row(
                         children: [
-                          const Expanded(child: Divider(color: AppColors.divider)),
+                          const Expanded(
+                              child: Divider(color: AppColors.divider)),
                           Padding(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: AppSizes.md),
@@ -335,7 +277,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                           ),
-                          const Expanded(child: Divider(color: AppColors.divider)),
+                          const Expanded(
+                              child: Divider(color: AppColors.divider)),
                         ],
                       ),
 
@@ -351,7 +294,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           const SizedBox(width: AppSizes.md),
                           _SocialIconButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              // Apple SSO
+                            },
                             child: const _AppleLogo(),
                           ),
                         ],
@@ -473,50 +418,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-
-  Widget _buildRoleCard({
-    required String role,
-    required IconData icon,
-    required String label,
-  }) {
-    final isSelected = _selectedRole == role;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedRole = role),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(
-          vertical: AppSizes.md,
-          horizontal: AppSizes.md,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.info.withOpacity(0.08) : AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.info : AppColors.divider,
-            width: isSelected ? 2 : 1.5,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 30,
-              color: isSelected ? AppColors.info : AppColors.textSecondary,
-            ),
-            const SizedBox(height: AppSizes.xs),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? AppColors.info : AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ── Google Logo ───────────────────────────────────────────────────────────────
@@ -549,7 +450,7 @@ class _AppleLogo extends StatelessWidget {
   }
 }
 
-// ── Social Icon Button ────────────────────────────────────────────────────────
+// - Social Icon Button ────────────────────────────────────────────────────────
 
 class _SocialIconButton extends StatelessWidget {
   const _SocialIconButton({

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/features/auth/screens/update_profile_screen.dart';
 import '../features/auth/screens/splash_screen.dart';
 import '../features/auth/screens/onboarding_screen.dart';
 import '../features/auth/screens/login_screen.dart';
@@ -38,12 +39,16 @@ class AppRoutes {
   static const String subscriptionPlans = '/subscription-plans';
   static const String payment = '/payment';
   static const String paymentSuccess = '/payment-success';
+  static const String UpdateProfile = "/update-profile";
 
   /// Generate route based on settings
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case test:
         return _buildRoute(const TestWidget() as Widget, settings);
+
+      case UpdateProfile:
+        return _buildRoute(const UpdateProfileScreen(), settings);
 
       case splash:
         return _buildRoute(const SplashScreen(), settings);
