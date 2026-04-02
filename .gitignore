@@ -49,3 +49,9 @@ app.*.map.json
 
 
 # _server/src/generated/prisma
+
+# Jekyll
+_site/
+.jekyll-cache/
+.jekyll-metadata
+Gemfile.lock
