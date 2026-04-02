@@ -3,7 +3,7 @@ description: Peer-to-Peer Tutoring Marketplace — Developer Documentation
 url: "https://hiyokun-d.github.io"
 baseurl: "/study-app"
 
-theme: just-the-docs
+theme: Midnight
 
 # ── Site settings ────────────────────────────────────────────────────────────
 logo: # path to logo if you have one, e.g. /assets/images/logo.png
@@ -31,7 +31,7 @@ aux_links_new_tab: true
 footer_content: "Made with ❤️ by the StudyApp team."
 
 # ── Color scheme ─────────────────────────────────────────────────────────────
-color_scheme: dark   # "light" or "dark"
+color_scheme: dark # "light" or "dark"
 
 # ── Code copy button ─────────────────────────────────────────────────────────
 enable_copy_code_button: true
@@ -41,7 +41,7 @@ back_to_top: true
 back_to_top_text: "Back to top"
 
 # ── Navigation ───────────────────────────────────────────────────────────────
-nav_sort: order   # sort nav items by front-matter `nav_order`
+nav_sort: order # sort nav items by front-matter `nav_order`
 
 # ── Plugins ──────────────────────────────────────────────────────────────────
 plugins:
