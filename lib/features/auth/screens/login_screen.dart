@@ -2,9 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_config.dart';
 import '../../../core/services/auth_state.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/inputs/text_input.dart';
@@ -22,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   bool _agreedToTerms = false;
   bool _isLoading = false;
@@ -34,6 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // MOCK MODE: Toggle via AppConfig.USE_MOCK
   Future<void> _login() async {
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -48,33 +52,50 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final response = await http.post(
-        Uri.parse('${AppConfig.API_URL}/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': _emailController.text.trim(),
-          'password': _passwordController.text,
-        }),
-      );
+      if (!AppConfig.USE_MOCK) {
+        final response = await http.post(
+          Uri.parse('${AppConfig.API_URL}/auth/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': _emailController.text.trim(),
+            'password': _passwordController.text,
+          }),
+        );
 
-      if (!mounted) return;
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (!mounted) return;
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        AuthState.instance.setFromResponse(data);
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          AuthState.instance.setFromResponse(data);
 
+          final role = AuthState.instance.role?.toUpperCase();
+          final destination =
+              role == 'TUTOR' ? '/teacher-dashboard' : '/student-dashboard';
+
+          Navigator.of(context).pushReplacementNamed(destination);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text(data['message'] ?? 'Login failed, please try again'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      } else {
+        await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
+        if (mounted) setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login successful! (Mock)'),
+            backgroundColor: Colors.green,
+          ),
+        );
         final role = AuthState.instance.role?.toUpperCase();
         final destination =
             role == 'TUTOR' ? '/teacher-dashboard' : '/student-dashboard';
-
         Navigator.of(context).pushReplacementNamed(destination);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(data['message'] ?? 'Login failed, please try again'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
       }
     } catch (e) {
       if (!mounted) return;
