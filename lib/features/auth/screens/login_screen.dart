@@ -1,9 +1,12 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/app_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/auth_state.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
@@ -22,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+//  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   bool _agreedToTerms = false;
   bool _isLoading = false;
@@ -38,8 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content:
-              Text('Please agree to the Terms of Service and Privacy Policy'),
+          content: Text(
+            'Please agree to the Terms of Service and Privacy Policy',
+          ),
         ),
       );
       return;
@@ -64,8 +68,9 @@ class _LoginScreenState extends State<LoginScreen> {
         AuthState.instance.setFromResponse(data);
 
         final role = AuthState.instance.role?.toUpperCase();
-        final destination =
-            role == 'TUTOR' ? '/teacher-dashboard' : '/student-dashboard';
+        final destination = role == 'TUTOR'
+            ? '/teacher-dashboard'
+            : '/student-dashboard';
 
         Navigator.of(context).pushReplacementNamed(destination);
       } else {
@@ -98,9 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // }
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to sign in with Google: $error'),
-        ),
+        SnackBar(content: Text('Failed to sign in with Google: $error')),
       );
     }
   }
@@ -122,9 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Container(
               decoration: const BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(24),
-                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(
@@ -235,7 +236,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         children: [
                           const Expanded(
-                              child: Divider(color: AppColors.divider)),
+                            child: Divider(color: AppColors.divider),
+                          ),
                           Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: AppSizes.md,
@@ -248,7 +250,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           const Expanded(
-                              child: Divider(color: AppColors.divider)),
+                            child: Divider(color: AppColors.divider),
+                          ),
                         ],
                       ),
 
@@ -348,8 +351,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               TextSpan(text: '${AppStrings.noAccount} '),
                               WidgetSpan(
                                 child: GestureDetector(
-                                  onTap: () => Navigator.of(context)
-                                      .pushReplacementNamed('/register'),
+                                  onTap: () => Navigator.of(
+                                    context,
+                                  ).pushReplacementNamed('/register'),
                                   child: Text(
                                     AppStrings.signUp,
                                     style: textTheme.bodySmall?.copyWith(
@@ -410,21 +414,14 @@ class _AppleLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const FaIcon(
-      FontAwesomeIcons.apple,
-      size: 28,
-      color: Colors.black,
-    );
+    return const FaIcon(FontAwesomeIcons.apple, size: 28, color: Colors.black);
   }
 }
 
 // ── Social Icon Button ────────────────────────────────────────────────────────
 
 class _SocialIconButton extends StatelessWidget {
-  const _SocialIconButton({
-    required this.onPressed,
-    required this.child,
-  });
+  const _SocialIconButton({required this.onPressed, required this.child});
 
   final VoidCallback onPressed;
   final Widget child;
