@@ -26,7 +26,7 @@ class _StudyAppState extends State<StudyApp> {
       themeMode: _themeMode,
 
       initialRoute: AppRoutes.splash,
-      // Routes are still needed for navigation from the dashboard
+      //Routes are still needed for navigation from the dashboard
       onGenerateRoute: AppRoutes.generateRoute,
 
       // Builder for global theme access
