@@ -1,16 +1,13 @@
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
-import '../../../core/constants/app_sizes.dart';
-import '../../../core/constants/app_strings.dart';
-import '../../../core/constants/app_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_config.dart';
+import '../../../core/constants/app_sizes.dart';
+import '../../../core/constants/app_strings.dart';
 import '../../../core/services/auth_state.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/inputs/text_input.dart';
@@ -72,19 +69,9 @@ class _LoginScreenState extends State<LoginScreen> {
         if (response.statusCode == 200 || response.statusCode == 201) {
           AuthState.instance.setFromResponse(data);
 
-// <<<<<<< feat/complete-identity-ui
-//           final role = AuthState.instance.role?.toUpperCase();
-//           final destination =
-//               role == 'TUTOR' ? '/teacher-dashboard' : '/student-dashboard';
-// =======
-//         final role = AuthState.instance.role?.toUpperCase();
-//         final destination = role == 'TUTOR'
-//             ? '/teacher-dashboard'
-//             : '/student-dashboard';
-// >>>>>>> master
           final role = AuthState.instance.role?.toUpperCase();
-final destination =
-    role == 'TUTOR' ? '/teacher-dashboard' : '/student-dashboard';
+          final destination =
+              role == 'TUTOR' ? '/teacher-dashboard' : '/student-dashboard';
           
           Navigator.of(context).pushReplacementNamed(destination);
         } else {

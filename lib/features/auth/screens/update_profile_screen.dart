@@ -27,7 +27,6 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   final _bioController = TextEditingController();
 
   String selectedRole = 'student';
-  String _selectedRole = 'STUDENT';
 
   bool _isLoading = false;
 
@@ -55,11 +54,12 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     setState(() => _isLoading = true);
 
     if (!AppConfig.USE_MOCK) {
+      final apiRole = selectedRole == 'tutor' ? 'TUTOR' : 'STUDENT';
       final result = await UserApiService.instance.updateProfile(
         username: _usernameController.text.trim(),
         fullName: fullNameController.text.trim(),
         bio: _bioController.text.trim(),
-        role: _selectedRole,
+        role: apiRole,
       );
 
       if (!mounted) return;
@@ -78,9 +78,9 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
         final role = result.user?['role']?.toString();
         if (role == 'TUTOR') {
-          Navigator.of(context).pushReplacementNamed('/teacher');
+          Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
         } else {
-          Navigator.of(context).pushReplacementNamed('/student');
+          Navigator.of(context).pushReplacementNamed('/student-dashboard');
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -93,20 +93,15 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     } else {
       await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return;
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Nice! Your profile has been updated. (Mock)'),
           backgroundColor: Colors.green,
         ),
       );
-final role = result.user?['role']?.toString();
-
-if (role == 'TUTOR') {
-  Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
-} else {
-  Navigator.of(context).pushReplacementNamed('/student-dashboard');
-}
+      if (selectedRole == 'tutor') {
+        Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
       } else {
         Navigator.of(context).pushReplacementNamed('/student-dashboard');
       }
@@ -120,7 +115,11 @@ if (role == 'TUTOR') {
     await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     setState(() => _isLoading = false);
-    Navigator.of(context).pushReplacementNamed('/student-dashboard');
+    if (selectedRole == 'tutor') {
+      Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+    } else {
+      Navigator.of(context).pushReplacementNamed('/student-dashboard');
+    }
   }
 
   Widget _buildLabel(String text) {
