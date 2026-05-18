@@ -17,6 +17,7 @@ import { UpdateProfileDTO } from './dto/update-profile.dto';
 import { SubmitVerificationDto } from './dto/submit-verification.dto';
 import { CreateTutorOfferDto } from './dto/create-tutor-offer.dto';
 import { UpdateTutorOfferDto } from './dto/update-tutor-offer.dto';
+import { CreateAvailabilityDto } from './dto/create-availability.dto';
 
 @Controller('user')
 export class UserController {
@@ -51,6 +52,25 @@ export class UserController {
   @Get('tutor/:id')
   getTutorDetail(@Param('id') id: string) {
     return this.userService.getTutorDetailProfile(id);
+  }
+
+  @Get('tutor/:id/availability')
+  getTutorAvailability(@Param('id') id: string) {
+    return this.userService.getTutorAvailability(id);
+  }
+
+  // ---------- TutorAvailability (JWT required) ----------
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('tutor/availability')
+  createAvailability(@Request() req: any, @Body() dto: CreateAvailabilityDto) {
+    return this.userService.createAvailability(req.user.userId || req.user.sub, dto);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('tutor/availability/:id')
+  deleteAvailability(@Request() req: any, @Param('id') id: string) {
+    return this.userService.deleteAvailability(req.user.userId || req.user.sub, id);
   }
 
   // ---------- TutorOffer CRUD (JWT required) ----------

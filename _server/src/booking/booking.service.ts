@@ -48,6 +48,18 @@ export class BookingService {
 
     if (tutorId === studentId) throw new BadRequestException('Cannot book yourself.');
 
+    // Validate availability slot if provided
+    let availabilityId: string | undefined;
+    if (dto.availabilityId) {
+      const slot = await this.prisma.tutor_availabilities.findFirst({
+        where: { id: dto.availabilityId, tutor_id: tutorId },
+      });
+      if (!slot) {
+        throw new BadRequestException('Availability slot not found or does not belong to this tutor.');
+      }
+      availabilityId = dto.availabilityId;
+    }
+
     // Conflict check: reject if tutor has a pending/confirmed booking that overlaps
     const newStart = new Date(dto.startAt);
     const conflict = await this.prisma.bookings.findFirst({
@@ -85,6 +97,7 @@ export class BookingService {
           student_id: studentId,
           tutor_id: tutorId,
           tutor_offer_id: dto.tutorOfferId,
+          tutor_availability_id: availabilityId,
           start_at: new Date(dto.startAt),
           end_at: endAt,
           duration_minutes: durationMinutes,
@@ -164,9 +177,12 @@ export class BookingService {
     return booking;
   }
 
-  async getStudentBookings(studentId: string) {
+  async getStudentBookings(studentId: string, status?: string) {
     return this.prisma.bookings.findMany({
-      where: { student_id: studentId },
+      where: {
+        student_id: studentId,
+        ...(status ? { status: status as any } : {}),
+      },
       select: {
         id: true,
         start_at: true,
@@ -187,9 +203,12 @@ export class BookingService {
     });
   }
 
-  async getTutorBookings(tutorId: string) {
+  async getTutorBookings(tutorId: string, status?: string) {
     return this.prisma.bookings.findMany({
-      where: { tutor_id: tutorId },
+      where: {
+        tutor_id: tutorId,
+        ...(status ? { status: status as any } : {}),
+      },
       select: {
         id: true,
         start_at: true,
@@ -351,5 +370,59 @@ export class BookingService {
 
     const [result] = await this.prisma.$transaction(ops);
     return { ...result, coins_earned: coinsCost };
+  }
+
+  async declineBooking(tutorId: string, bookingId: string) {
+    const booking = await this.prisma.bookings.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) throw new NotFoundException('Booking not found.');
+    if (booking.tutor_id !== tutorId) {
+      throw new ForbiddenException('Only the tutor can decline this booking.');
+    }
+    if (booking.status !== 'pending') {
+      throw new ForbiddenException('Only pending bookings can be declined.');
+    }
+
+    const coinsCost = booking.coins_cost ?? 0;
+    const ops: any[] = [
+      this.prisma.bookings.update({
+        where: { id: bookingId },
+        data: { status: 'declined', updated_at: new Date() },
+        select: { id: true, status: true, coins_cost: true },
+      }),
+    ];
+
+    if (coinsCost > 0) {
+      ops.push(
+        this.prisma.profiles.update({
+          where: { id: booking.student_id },
+          data: { coins_balance: { increment: coinsCost } },
+        }),
+        this.prisma.coin_transactions.create({
+          data: {
+            profile_id: booking.student_id,
+            amount: coinsCost,
+            kind: 'REFUND',
+            ref_id: bookingId,
+            note: 'Tutor declined booking — coins refunded',
+          },
+        }),
+      );
+    }
+
+    ops.push(
+      this.prisma.notifications.create({
+        data: {
+          profile_id: booking.student_id,
+          type: 'BOOKING_DECLINED',
+          payload: { booking_id: bookingId, tutor_id: tutorId, coins_refunded: coinsCost },
+        },
+      }),
+    );
+
+    const [result] = await this.prisma.$transaction(ops);
+    return { ...result, coins_refunded: coinsCost };
   }
 }

@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UnauthorizedException,
   UseGuards,
@@ -26,18 +27,18 @@ export class BookingController {
     return this.bookingService.createBooking(userId, dto);
   }
 
-  // GET /booking/student — my bookings as a student
+  // GET /booking/student?status=pending — my bookings as a student
   @Get('student')
-  getStudentBookings(@Request() req: any) {
+  getStudentBookings(@Request() req: any, @Query('status') status?: string) {
     const userId = req.user.userId || req.user.sub;
-    return this.bookingService.getStudentBookings(userId);
+    return this.bookingService.getStudentBookings(userId, status);
   }
 
-  // GET /booking/tutor — my bookings as a tutor
+  // GET /booking/tutor?status=confirmed — my bookings as a tutor
   @Get('tutor')
-  getTutorBookings(@Request() req: any) {
+  getTutorBookings(@Request() req: any, @Query('status') status?: string) {
     const userId = req.user.userId || req.user.sub;
-    return this.bookingService.getTutorBookings(userId);
+    return this.bookingService.getTutorBookings(userId, status);
   }
 
   // GET /booking/:id — student or tutor fetches a single booking detail
@@ -66,5 +67,12 @@ export class BookingController {
   completeBooking(@Param('id') id: string, @Request() req: any) {
     const userId = req.user.userId || req.user.sub;
     return this.bookingService.completeBooking(id, userId);
+  }
+
+  // PATCH /booking/:id/decline — tutor declines pending booking, refunds student
+  @Patch(':id/decline')
+  declineBooking(@Param('id') id: string, @Request() req: any) {
+    const userId = req.user.userId || req.user.sub;
+    return this.bookingService.declineBooking(id, userId);
   }
 }

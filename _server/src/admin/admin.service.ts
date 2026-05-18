@@ -10,6 +10,9 @@ import { VerifyTutorDto } from './dto/verify-tutor.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { ProcessWithdrawalDto } from './dto/process-withdrawal.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
+import { BanUserDto } from './dto/ban-user.dto';
+import { WarnUserDto } from './dto/warn-user.dto';
+import { GrantCoinsDto } from './dto/grant-coins.dto';
 import { hash } from 'argon2';
 
 @Injectable()
@@ -114,15 +117,200 @@ export class AdminService {
           role: true,
           verification_status: true,
           is_email_verified: true,
+          is_active: true,
+          is_banned: true,
+          ban_reason: true,
+          banned_at: true,
+          penalty_until: true,
+          penalty_rating_knock: true,
+          penalty_price_pct: true,
           created_at: true,
           overall_rating: true,
           rating_count: true,
+          coins_balance: true,
         },
       }),
       this.prisma.profiles.count(),
     ]);
 
     return { data: users, total, page, limit };
+  }
+
+  async banUser(adminId: string, userId: string, dto: BanUserDto) {
+    const user = await this.prisma.profiles.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found.');
+    if (user.role === 'ADMIN') throw new ForbiddenException('Cannot ban another admin.');
+
+    await this.prisma.$transaction([
+      this.prisma.profiles.update({
+        where: { id: userId },
+        data: {
+          is_banned: true,
+          is_active: false,
+          ban_reason: dto.reason,
+          banned_at: new Date(),
+          banned_by: adminId,
+          updated_at: new Date(),
+        },
+      }),
+      this.prisma.notifications.create({
+        data: {
+          profile_id: userId,
+          type: 'ACCOUNT_BANNED',
+          payload: { reason: dto.reason },
+        },
+      }),
+    ]);
+
+    return { message: 'User banned.' };
+  }
+
+  async unbanUser(userId: string) {
+    const user = await this.prisma.profiles.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found.');
+    if (!user.is_banned) throw new BadRequestException('User is not banned.');
+
+    await this.prisma.profiles.update({
+      where: { id: userId },
+      data: {
+        is_banned: false,
+        is_active: true,
+        ban_reason: null,
+        banned_at: null,
+        banned_by: null,
+        updated_at: new Date(),
+      },
+    });
+
+    await this.prisma.notifications.create({
+      data: {
+        profile_id: userId,
+        type: 'ACCOUNT_UNBANNED',
+        payload: { message: 'Your account has been reinstated.' },
+      },
+    });
+
+    return { message: 'User unbanned.' };
+  }
+
+  async deactivateUser(adminId: string, userId: string) {
+    const user = await this.prisma.profiles.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found.');
+    if (user.role === 'ADMIN') throw new ForbiddenException('Cannot deactivate another admin.');
+    if (!user.is_active) throw new BadRequestException('Account already deactivated.');
+
+    await this.prisma.$transaction([
+      this.prisma.profiles.update({
+        where: { id: userId },
+        data: {
+          is_active: false,
+          deactivated_at: new Date(),
+          deactivated_by: adminId,
+          updated_at: new Date(),
+        },
+      }),
+      this.prisma.notifications.create({
+        data: {
+          profile_id: userId,
+          type: 'ACCOUNT_DEACTIVATED',
+          payload: { message: 'Your account has been temporarily deactivated.' },
+        },
+      }),
+    ]);
+
+    return { message: 'User deactivated.' };
+  }
+
+  async activateUser(userId: string) {
+    const user = await this.prisma.profiles.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found.');
+    if (user.is_banned) throw new ForbiddenException('User is banned. Unban first.');
+    if (user.is_active) throw new BadRequestException('Account already active.');
+
+    await this.prisma.$transaction([
+      this.prisma.profiles.update({
+        where: { id: userId },
+        data: {
+          is_active: true,
+          deactivated_at: null,
+          deactivated_by: null,
+          updated_at: new Date(),
+        },
+      }),
+      this.prisma.notifications.create({
+        data: {
+          profile_id: userId,
+          type: 'ACCOUNT_ACTIVATED',
+          payload: { message: 'Your account has been reactivated.' },
+        },
+      }),
+    ]);
+
+    return { message: 'User activated.' };
+  }
+
+  async warnUser(adminId: string, userId: string, dto: WarnUserDto) {
+    const user = await this.prisma.profiles.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found.');
+
+    const penaltyUntil = new Date();
+    penaltyUntil.setDate(penaltyUntil.getDate() + dto.penalty_days);
+
+    await this.prisma.$transaction([
+      this.prisma.profiles.update({
+        where: { id: userId },
+        data: {
+          penalty_until: penaltyUntil,
+          penalty_rating_knock: dto.rating_knock,
+          penalty_price_pct: dto.price_pct,
+          updated_at: new Date(),
+        },
+      }),
+      this.prisma.notifications.create({
+        data: {
+          profile_id: userId,
+          type: 'PENALTY_ISSUED',
+          payload: {
+            penalty_days: dto.penalty_days,
+            penalty_until: penaltyUntil.toISOString(),
+            rating_knock: dto.rating_knock,
+            price_pct: dto.price_pct,
+            message: `A penalty has been applied to your account for ${dto.penalty_days} day(s).`,
+          },
+        },
+      }),
+    ]);
+
+    return { message: `Penalty issued until ${penaltyUntil.toISOString()}.`, penalty_until: penaltyUntil };
+  }
+
+  // ⚠️ TEMP — testing only. Remove before demo/prod.
+  async grantCoins(adminId: string, userId: string, dto: GrantCoinsDto) {
+    const user = await this.prisma.profiles.findUnique({
+      where: { id: userId },
+      select: { id: true, full_name: true, coins_balance: true },
+    });
+    if (!user) throw new NotFoundException('User not found.');
+
+    await this.prisma.$transaction([
+      this.prisma.profiles.update({
+        where: { id: userId },
+        data: { coins_balance: { increment: dto.amount } },
+      }),
+      this.prisma.coin_transactions.create({
+        data: {
+          profile_id: userId,
+          amount: dto.amount,
+          kind: 'ADJUSTMENT',
+          note: dto.note ?? `Admin grant by ${adminId}`,
+        },
+      }),
+    ]);
+
+    return {
+      message: `Granted ${dto.amount} coins to user.`,
+      new_balance: user.coins_balance + dto.amount,
+    };
   }
 
   async getPendingTutors() {
@@ -251,8 +439,19 @@ export class AdminService {
         role: true,
         verification_status: true,
         is_email_verified: true,
+        is_active: true,
+        is_banned: true,
+        ban_reason: true,
+        banned_at: true,
+        banned_by: true,
+        deactivated_at: true,
+        deactivated_by: true,
+        penalty_until: true,
+        penalty_rating_knock: true,
+        penalty_price_pct: true,
         overall_rating: true,
         rating_count: true,
+        coins_balance: true,
         created_at: true,
         updated_at: true,
       },

@@ -17,6 +17,9 @@ import { VerifyTutorDto } from './dto/verify-tutor.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { ProcessWithdrawalDto } from './dto/process-withdrawal.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
+import { BanUserDto } from './dto/ban-user.dto';
+import { WarnUserDto } from './dto/warn-user.dto';
+import { GrantCoinsDto } from './dto/grant-coins.dto';
 
 @Controller('admin')
 export class AdminController {
@@ -54,6 +57,53 @@ export class AdminController {
   @Get('users/:id')
   getUserById(@Param('id') id: string) {
     return this.adminService.getUserById(id);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  @Patch('users/:id/ban')
+  banUser(@Param('id') id: string, @Request() req: any, @Body() dto: BanUserDto) {
+    const adminId = req.user.userId || req.user.sub;
+    return this.adminService.banUser(adminId, id, dto);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  @Patch('users/:id/unban')
+  unbanUser(@Param('id') id: string) {
+    return this.adminService.unbanUser(id);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  @Patch('users/:id/deactivate')
+  deactivateUser(@Param('id') id: string, @Request() req: any) {
+    const adminId = req.user.userId || req.user.sub;
+    return this.adminService.deactivateUser(adminId, id);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  @Patch('users/:id/activate')
+  activateUser(@Param('id') id: string) {
+    return this.adminService.activateUser(id);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  @Post('users/:id/warn')
+  warnUser(@Param('id') id: string, @Request() req: any, @Body() dto: WarnUserDto) {
+    const adminId = req.user.userId || req.user.sub;
+    return this.adminService.warnUser(adminId, id, dto);
+  }
+
+  // ⚠️ TEMP — testing only. Remove before demo/prod.
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  @Post('users/:id/grant-coins')
+  grantCoins(@Param('id') id: string, @Request() req: any, @Body() dto: GrantCoinsDto) {
+    const adminId = req.user.userId || req.user.sub;
+    return this.adminService.grantCoins(adminId, id, dto);
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)

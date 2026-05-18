@@ -24,4 +24,9 @@ export class CreateBookingDto {
   @IsInt()
   @Min(15)
   durationMinutes?: number;
+
+  // Optional — link booking to a specific tutor availability slot
+  @IsOptional()
+  @IsUUID()
+  availabilityId?: string;
 }
