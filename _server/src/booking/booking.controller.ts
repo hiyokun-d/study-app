@@ -13,11 +13,16 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { ReviewsService } from 'src/reviews/reviews.service';
+import { CreateReviewDto } from 'src/reviews/dto/create-review.dto';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('booking')
 export class BookingController {
-  constructor(private readonly bookingService: BookingService) {}
+  constructor(
+    private readonly bookingService: BookingService,
+    private readonly reviewsService: ReviewsService,
+  ) {}
 
   // POST /booking — student creates a booking
   @Post()
@@ -74,5 +79,12 @@ export class BookingController {
   declineBooking(@Param('id') id: string, @Request() req: any) {
     const userId = req.user.userId || req.user.sub;
     return this.bookingService.declineBooking(id, userId);
+  }
+
+  // POST /booking/:id/review — student submits review for completed booking
+  @Post(':id/review')
+  createReview(@Param('id') id: string, @Request() req: any, @Body() dto: CreateReviewDto) {
+    const userId = req.user.userId || req.user.sub;
+    return this.reviewsService.createReview(userId, dto, id);
   }
 }

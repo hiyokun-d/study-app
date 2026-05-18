@@ -11,9 +11,13 @@ import { CreateReviewDto } from './dto/create-review.dto';
 export class ReviewsService {
   constructor(private prisma: PrismaService) {}
 
-  async createReview(reviewerId: string, dto: CreateReviewDto) {
+  async createReview(reviewerId: string, dto: CreateReviewDto, bookingIdOverride?: string) {
+    const bookingId = bookingIdOverride ?? dto.booking_id;
+    if (!bookingId) {
+      throw new BadRequestException('booking_id is required.');
+    }
     const booking = await this.prisma.bookings.findUnique({
-      where: { id: dto.booking_id },
+      where: { id: bookingId },
     });
 
     if (!booking) throw new NotFoundException('Booking not found.');
@@ -25,13 +29,13 @@ export class ReviewsService {
     }
 
     const existing = await this.prisma.reviews.findFirst({
-      where: { booking_id: dto.booking_id, reviewer_id: reviewerId },
+      where: { booking_id: bookingId, reviewer_id: reviewerId },
     });
     if (existing) throw new BadRequestException('You already reviewed this session.');
 
     const review = await this.prisma.reviews.create({
       data: {
-        booking_id: dto.booking_id,
+        booking_id: bookingId,
         reviewer_id: reviewerId,
         reviewee_id: booking.tutor_id,
         rating: dto.rating,
