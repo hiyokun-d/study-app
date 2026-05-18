@@ -372,7 +372,7 @@ export class BookingService {
     return { ...result, coins_earned: coinsCost };
   }
 
-  async declineBooking(tutorId: string, bookingId: string) {
+  async declineBooking(bookingId: string, tutorId: string) {
     const booking = await this.prisma.bookings.findUnique({
       where: { id: bookingId },
     });
