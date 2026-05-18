@@ -9,7 +9,30 @@ const TUTOR_SELECT = {
   overall_rating: true,
   rating_count: true,
   verification_status: true,
+  penalty_until: true,
+  penalty_rating_knock: true,
+  penalty_price_pct: true,
 };
+
+function applyTutorPenalty(tutor: any) {
+  const now = new Date();
+  const penalized = tutor.penalty_until && tutor.penalty_until > now;
+  const { penalty_until, penalty_rating_knock, penalty_price_pct, ...rest } = tutor;
+  if (!penalized) return rest;
+  const knock = Number(penalty_rating_knock ?? 0);
+  rest.overall_rating = Math.max(0, Number(rest.overall_rating) - knock);
+  return rest;
+}
+
+function applyOfferPenalty(offer: any, tutor: any) {
+  const now = new Date();
+  const penalized = tutor.penalty_until && tutor.penalty_until > now;
+  if (!penalized) return offer;
+  const pct = Number(tutor.penalty_price_pct ?? 0);
+  if (pct <= 0) return offer;
+  const discountedRate = Math.ceil(offer.coins_per_hour * (1 - pct / 100));
+  return { ...offer, coins_per_hour: discountedRate };
+}
 
 @Injectable()
 export class OffersService {
@@ -28,7 +51,7 @@ export class OffersService {
 
     const where: any = {
       is_active: true,
-      profiles: { verification_status: 'APPROVED' },
+      profiles: { verification_status: 'APPROVED', is_active: true, is_banned: false },
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
@@ -62,10 +85,15 @@ export class OffersService {
       this.prisma.tutor_offers.count({ where }),
     ]);
 
-    let offers = raw.map((o) => ({
-      ...o,
-      coins_per_session: Math.ceil((o.coins_per_hour * o.duration_minutes) / 60),
-    }));
+    let offers = raw.map((o) => {
+      const adjustedOffer = applyOfferPenalty(o, o.profiles);
+      const adjustedTutor = applyTutorPenalty(o.profiles);
+      return {
+        ...adjustedOffer,
+        profiles: adjustedTutor,
+        coins_per_session: Math.ceil((adjustedOffer.coins_per_hour * o.duration_minutes) / 60),
+      };
+    });
 
     if (subject) {
       offers = offers.filter((o) => o.subject_ids.includes(subject));
@@ -76,7 +104,7 @@ export class OffersService {
 
   async getOfferDetail(offerId: string) {
     const offer = await this.prisma.tutor_offers.findFirst({
-      where: { id: offerId, is_active: true },
+      where: { id: offerId, is_active: true, profiles: { is_active: true, is_banned: false } },
       select: {
         id: true,
         title: true,
@@ -117,9 +145,13 @@ export class OffersService {
       },
     });
 
+    const adjustedOffer = applyOfferPenalty(offer, offer.profiles);
+    const adjustedTutor = applyTutorPenalty(offer.profiles);
+
     return {
-      ...offer,
-      coins_per_session: Math.ceil((offer.coins_per_hour * offer.duration_minutes) / 60),
+      ...adjustedOffer,
+      profiles: adjustedTutor,
+      coins_per_session: Math.ceil((adjustedOffer.coins_per_hour * offer.duration_minutes) / 60),
       tutor_reviews: reviews,
     };
   }

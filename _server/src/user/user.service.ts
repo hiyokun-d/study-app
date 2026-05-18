@@ -10,6 +10,36 @@ import { SubmitVerificationDto } from './dto/submit-verification.dto';
 import { EncryptionService } from 'src/common/encryption/encryption.service';
 import { CreateTutorOfferDto } from './dto/create-tutor-offer.dto';
 import { UpdateTutorOfferDto } from './dto/update-tutor-offer.dto';
+import { CreateAvailabilityDto } from './dto/create-availability.dto';
+
+const ACTIVE_ACCOUNT = { is_active: true, is_banned: false };
+
+function applyPenalty<T extends {
+  overall_rating?: any;
+  book_price_coins?: number;
+  penalty_until?: Date | null;
+  penalty_rating_knock?: any;
+  penalty_price_pct?: number;
+}>(profile: T): Omit<T, 'penalty_until' | 'penalty_rating_knock' | 'penalty_price_pct'> {
+  const now = new Date();
+  const penalized = profile.penalty_until && profile.penalty_until > now;
+
+  const { penalty_until, penalty_rating_knock, penalty_price_pct, ...rest } = profile as any;
+
+  if (!penalized) return rest;
+
+  const knock = Number(penalty_rating_knock ?? 0);
+  const pct = Number(penalty_price_pct ?? 0);
+
+  if (rest.overall_rating !== undefined) {
+    rest.overall_rating = Math.max(0, Number(rest.overall_rating) - knock);
+  }
+  if (rest.book_price_coins !== undefined && pct > 0) {
+    rest.book_price_coins = Math.ceil(rest.book_price_coins * (1 - pct / 100));
+  }
+
+  return rest;
+}
 
 @Injectable()
 export class UserService {
@@ -19,8 +49,8 @@ export class UserService {
   ) {}
 
   async getAllTutorProfile() {
-    return this.prisma.profiles.findMany({
-      where: { role: 'TUTOR', verification_status: 'APPROVED' },
+    const tutors = await this.prisma.profiles.findMany({
+      where: { role: 'TUTOR', verification_status: 'APPROVED', ...ACTIVE_ACCOUNT },
       select: {
         id: true,
         full_name: true,
@@ -33,8 +63,12 @@ export class UserService {
         overall_rating: true,
         rating_count: true,
         tutor_rating: true,
+        penalty_until: true,
+        penalty_rating_knock: true,
+        penalty_price_pct: true,
       },
     });
+    return tutors.map(applyPenalty);
   }
 
   async getAllStudentProfile() {
@@ -56,10 +90,11 @@ export class UserService {
     subject?: string,
     maxCoins?: number,
   ) {
-    return this.prisma.profiles.findMany({
+    const tutors = await this.prisma.profiles.findMany({
       where: {
         role: 'TUTOR',
         verification_status: 'APPROVED',
+        ...ACTIVE_ACCOUNT,
         ...(searchQuery && {
           OR: [
             { full_name: { contains: searchQuery, mode: 'insensitive' } },
@@ -80,14 +115,18 @@ export class UserService {
         subjects: true,
         overall_rating: true,
         rating_count: true,
+        penalty_until: true,
+        penalty_rating_knock: true,
+        penalty_price_pct: true,
       },
       orderBy: { created_at: 'desc' },
     });
+    return tutors.map(applyPenalty);
   }
 
   async getTutorDetailProfile(tutorID: string) {
     const tutor = await this.prisma.profiles.findFirst({
-      where: { id: tutorID, role: 'TUTOR', verification_status: 'APPROVED' },
+      where: { id: tutorID, role: 'TUTOR', verification_status: 'APPROVED', ...ACTIVE_ACCOUNT },
       select: {
         id: true,
         full_name: true,
@@ -100,6 +139,9 @@ export class UserService {
         overall_rating: true,
         rating_count: true,
         tutor_rating: true,
+        penalty_until: true,
+        penalty_rating_knock: true,
+        penalty_price_pct: true,
         tutor_offers: {
           where: { is_active: true },
           select: {
@@ -116,13 +158,125 @@ export class UserService {
     });
     if (!tutor) throw new NotFoundException('Tutor not found.');
 
+    const penalized = tutor.penalty_until && tutor.penalty_until > new Date();
+    const pricePct = Number(tutor.penalty_price_pct ?? 0);
+
+    const { penalty_until, penalty_rating_knock, penalty_price_pct, ...tutorBase } = tutor as any;
+
     return {
-      ...tutor,
-      tutor_offers: tutor.tutor_offers.map((o) => ({
-        ...o,
-        coins_per_session: Math.ceil((o.coins_per_hour * o.duration_minutes) / 60),
-      })),
+      ...applyPenalty(tutor),
+      tutor_offers: tutor.tutor_offers.map((o) => {
+        const coinsPerHour = penalized && pricePct > 0
+          ? Math.ceil(o.coins_per_hour * (1 - pricePct / 100))
+          : o.coins_per_hour;
+        return {
+          ...o,
+          coins_per_hour: coinsPerHour,
+          coins_per_session: Math.ceil((coinsPerHour * o.duration_minutes) / 60),
+        };
+      }),
     };
+  }
+
+  // ---------- TutorAvailability CRUD ----------
+
+  async createAvailability(tutorId: string, dto: CreateAvailabilityDto) {
+    const tutor = await this.prisma.profiles.findUnique({
+      where: { id: tutorId },
+      select: { role: true },
+    });
+    if (!tutor) throw new NotFoundException('User not found.');
+    if (tutor.role !== 'TUTOR') throw new ForbiddenException('Only tutors can add availability slots.');
+
+    const from = new Date(dto.available_from);
+    const to = new Date(dto.available_to);
+
+    if (from >= to) {
+      throw new BadRequestException('available_from must be before available_to.');
+    }
+    if (from < new Date()) {
+      throw new BadRequestException('Cannot create availability slot in the past.');
+    }
+
+    // Prevent overlapping slots for same tutor
+    const overlap = await this.prisma.tutor_availabilities.findFirst({
+      where: {
+        tutor_id: tutorId,
+        available_from: { lt: to },
+        available_to: { gt: from },
+      },
+    });
+    if (overlap) {
+      throw new BadRequestException(
+        `Slot overlaps with existing availability from ${overlap.available_from.toISOString()} to ${overlap.available_to.toISOString()}.`,
+      );
+    }
+
+    return this.prisma.tutor_availabilities.create({
+      data: {
+        tutor_id: tutorId,
+        available_from: from,
+        available_to: to,
+        timezone: dto.timezone,
+      },
+      select: {
+        id: true,
+        available_from: true,
+        available_to: true,
+        timezone: true,
+        created_at: true,
+      },
+    });
+  }
+
+  async getTutorAvailability(tutorId: string) {
+    const now = new Date();
+    // Slots that are in the future and not tied to a pending/confirmed booking
+    const bookedSlotIds = await this.prisma.bookings.findMany({
+      where: {
+        tutor_id: tutorId,
+        status: { in: ['pending', 'confirmed'] },
+        tutor_availability_id: { not: null },
+      },
+      select: { tutor_availability_id: true },
+    });
+    const bookedIds = bookedSlotIds.map((b) => b.tutor_availability_id).filter(Boolean) as string[];
+
+    return this.prisma.tutor_availabilities.findMany({
+      where: {
+        tutor_id: tutorId,
+        available_from: { gt: now },
+        ...(bookedIds.length > 0 && { id: { notIn: bookedIds } }),
+      },
+      select: {
+        id: true,
+        available_from: true,
+        available_to: true,
+        timezone: true,
+      },
+      orderBy: { available_from: 'asc' },
+    });
+  }
+
+  async deleteAvailability(tutorId: string, slotId: string) {
+    const slot = await this.prisma.tutor_availabilities.findFirst({
+      where: { id: slotId, tutor_id: tutorId },
+    });
+    if (!slot) throw new NotFoundException('Availability slot not found.');
+
+    // Block deletion if a booking references this slot
+    const linked = await this.prisma.bookings.findFirst({
+      where: {
+        tutor_availability_id: slotId,
+        status: { in: ['pending', 'confirmed'] },
+      },
+    });
+    if (linked) {
+      throw new BadRequestException('Cannot delete slot — a pending or confirmed booking is tied to it.');
+    }
+
+    await this.prisma.tutor_availabilities.delete({ where: { id: slotId } });
+    return { message: 'Availability slot removed.' };
   }
 
   // ---------- TutorOffer CRUD ----------

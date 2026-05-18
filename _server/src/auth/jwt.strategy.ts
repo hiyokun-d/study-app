@@ -1,6 +1,6 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -23,6 +23,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (!user) {
       throw new UnauthorizedException('User not found or token is invalid.');
+    }
+
+    if (user.is_banned) {
+      throw new ForbiddenException('Account permanently banned.');
+    }
+    if (!user.is_active) {
+      throw new ForbiddenException('Account deactivated. Contact support.');
     }
 
     return {

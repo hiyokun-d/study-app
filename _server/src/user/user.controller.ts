@@ -17,6 +17,7 @@ import { UpdateProfileDTO } from './dto/update-profile.dto';
 import { SubmitVerificationDto } from './dto/submit-verification.dto';
 import { CreateTutorOfferDto } from './dto/create-tutor-offer.dto';
 import { UpdateTutorOfferDto } from './dto/update-tutor-offer.dto';
+import { CreateAvailabilityDto } from './dto/create-availability.dto';
 
 @Controller('user')
 export class UserController {
@@ -53,6 +54,25 @@ export class UserController {
     return this.userService.getTutorDetailProfile(id);
   }
 
+  @Get('tutor/:id/availability')
+  getTutorAvailability(@Param('id') id: string) {
+    return this.userService.getTutorAvailability(id);
+  }
+
+  // ---------- TutorAvailability (JWT required) ----------
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('tutor/availability')
+  createAvailability(@Request() req: any, @Body() dto: CreateAvailabilityDto) {
+    return this.userService.createAvailability(req.user.userId || req.user.sub, dto);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('tutor/availability/:id')
+  deleteAvailability(@Request() req: any, @Param('id') id: string) {
+    return this.userService.deleteAvailability(req.user.userId || req.user.sub, id);
+  }
+
   // ---------- TutorOffer CRUD (JWT required) ----------
 
   @UseGuards(AuthGuard('jwt'))
@@ -74,7 +94,11 @@ export class UserController {
     @Param('id') id: string,
     @Body() dto: UpdateTutorOfferDto,
   ) {
-    return this.userService.updateOffer(req.user.userId || req.user.sub, id, dto);
+    return this.userService.updateOffer(
+      req.user.userId || req.user.sub,
+      id,
+      dto,
+    );
   }
 
   @UseGuards(AuthGuard('jwt'))
@@ -84,12 +108,12 @@ export class UserController {
   }
 
   // ---------- Profile ----------
-
   @UseGuards(AuthGuard('jwt'))
   @Post('tutor/verification')
   submitVerification(@Request() req: any, @Body() dto: SubmitVerificationDto) {
     const userId = req.user.userId || req.user.sub;
-    if (!userId) throw new UnauthorizedException('Identification missing in token.');
+    if (!userId)
+      throw new UnauthorizedException('Identification missing in token.');
     return this.userService.submitVerification(userId, dto);
   }
 
@@ -97,7 +121,8 @@ export class UserController {
   @Patch('update/profile')
   updateProfile(@Request() req: any, @Body() updateData: UpdateProfileDTO) {
     const userId = req.user.userId || req.user.sub || req.user.id;
-    if (!userId) throw new UnauthorizedException('Identification missing in token.');
+    if (!userId)
+      throw new UnauthorizedException('Identification missing in token.');
     return this.userService.updateProfile(userId, updateData);
   }
 

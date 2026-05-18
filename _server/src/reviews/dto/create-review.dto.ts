@@ -1,8 +1,10 @@
 import { IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 
 export class CreateReviewDto {
+  // Optional when booking_id comes from URL path (POST /booking/:id/review)
+  @IsOptional()
   @IsUUID()
-  booking_id: string;
+  booking_id?: string;
 
   @IsInt()
   @Min(1)

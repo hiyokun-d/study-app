@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UnauthorizedException,
   UseGuards,
@@ -12,11 +13,16 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { ReviewsService } from 'src/reviews/reviews.service';
+import { CreateReviewDto } from 'src/reviews/dto/create-review.dto';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('booking')
 export class BookingController {
-  constructor(private readonly bookingService: BookingService) {}
+  constructor(
+    private readonly bookingService: BookingService,
+    private readonly reviewsService: ReviewsService,
+  ) {}
 
   // POST /booking — student creates a booking
   @Post()
@@ -26,18 +32,25 @@ export class BookingController {
     return this.bookingService.createBooking(userId, dto);
   }
 
-  // GET /booking/student — my bookings as a student
+  // GET /booking/student?status=pending — my bookings as a student
   @Get('student')
-  getStudentBookings(@Request() req: any) {
+  getStudentBookings(@Request() req: any, @Query('status') status?: string) {
     const userId = req.user.userId || req.user.sub;
-    return this.bookingService.getStudentBookings(userId);
+    return this.bookingService.getStudentBookings(userId, status);
   }
 
-  // GET /booking/tutor — my bookings as a tutor
+  // GET /booking/tutor?status=confirmed — my bookings as a tutor
   @Get('tutor')
-  getTutorBookings(@Request() req: any) {
+  getTutorBookings(@Request() req: any, @Query('status') status?: string) {
     const userId = req.user.userId || req.user.sub;
-    return this.bookingService.getTutorBookings(userId);
+    return this.bookingService.getTutorBookings(userId, status);
+  }
+
+  // GET /booking/:id — student or tutor fetches a single booking detail
+  @Get(':id')
+  getBookingById(@Param('id') id: string, @Request() req: any) {
+    const userId = req.user.userId || req.user.sub;
+    return this.bookingService.getBookingById(id, userId);
   }
 
   // PATCH /booking/:id/cancel
@@ -59,5 +72,19 @@ export class BookingController {
   completeBooking(@Param('id') id: string, @Request() req: any) {
     const userId = req.user.userId || req.user.sub;
     return this.bookingService.completeBooking(id, userId);
+  }
+
+  // PATCH /booking/:id/decline — tutor declines pending booking, refunds student
+  @Patch(':id/decline')
+  declineBooking(@Param('id') id: string, @Request() req: any) {
+    const userId = req.user.userId || req.user.sub;
+    return this.bookingService.declineBooking(id, userId);
+  }
+
+  // POST /booking/:id/review — student submits review for completed booking
+  @Post(':id/review')
+  createReview(@Param('id') id: string, @Request() req: any, @Body() dto: CreateReviewDto) {
+    const userId = req.user.userId || req.user.sub;
+    return this.reviewsService.createReview(userId, dto, id);
   }
 }

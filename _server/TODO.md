@@ -8,74 +8,86 @@
 
 - [x] Auth — signup, login, Google OAuth, JWT
 - [x] User module — getAllTutors, filterTutors, getTutorDetail, updateProfile
-- [x] Booking — create, list (student/tutor), cancel, confirm, **complete** (coins released)
+- [x] Booking — create, list (student/tutor), cancel, confirm, complete (coins released)
+- [x] GET /booking/:id — single booking detail, auth-gated to student/tutor only
+- [x] Conflict detection on createBooking — 409 if tutor slot overlaps pending/confirmed
 - [x] Admin — stats, user list, tutor verify, payment orders, refunds, withdrawal management
 - [x] Coin system — balance, purchase order, history, QRIS stub, withdrawal request
 - [x] DB schema — coins_cost, book_price_coins, coins_per_hour, withdrawal_requests
-- [x] DB migrated to Supabase (db push ✅)
+- [x] DB migrated to Supabase + schema pushed (is_active, is_banned, penalty_*, tutor_availability_id, declined status)
 - [x] TutorOffer CRUD — create, list mine, update, soft-delete (with coins_per_hour)
 - [x] UpdateProfile — book_price_coins + subjects fields added
-- [x] Reviews — POST /reviews, GET /reviews/tutor/:id, auto-recalculates overall_rating
-- [x] Notifications module — GET /notifications, PATCH seen/:id, PATCH seen-all, unseen-count
-- [x] Booking events → notifications wired (NEW_BOOKING, BOOKING_CONFIRMED, BOOKING_CANCELLED, SESSION_COMPLETED)
+- [x] Reviews — POST /reviews AND POST /booking/:id/review (both work), GET /reviews/tutor/:id
+- [x] Duplicate review blocked per booking
+- [x] Notifications — GET, unseen-count, mark seen, mark all seen
+- [x] Booking events → notifications (NEW_BOOKING, CONFIRMED, CANCELLED, COMPLETED, DECLINED)
+- [x] Filter bookings by status — ?status= on student/tutor list
+- [x] TutorAvailability CRUD — create slot, list future slots, delete slot
+- [x] Booked slot hidden from availability list (pending/confirmed blocks it)
+- [x] Booking → link to availability slot (optional availabilityId)
+- [x] Booking decline — tutor passes, coins refunded, student notified
+- [x] Admin account control — ban/unban, activate/deactivate, warn (penalty)
+- [x] Admin grant-coins ⚠️ TEMP
+- [x] Auth guard — banned/inactive → 403 on every request, no bypass
+- [x] Public listings filter — banned/inactive tutors hidden everywhere
+- [x] Penalty system — rating knocked, price discounted during penalty window
 
 ---
 
-## 🔴 Critical — demo breaks without these
+## 🔴 Should have (important, not blocking but users will notice)
 
-~~1. TutorOffer CRUD~~ ✅
-~~2. Set coin rate on profile~~ ✅
-~~3. Reviews~~ ✅
-~~4. Notifications~~ ✅
+- [ ] **GET /booking/tutor/pending** — dedicated "incoming requests" list for tutor dashboard
+  - Tutors need a fast way to see only pending bookings without filtering manually
 
----
+- [ ] **POST /booking/:id/review by tutor** — currently only student can review
+  - Tutors should rate students too (student_rating field already in schema)
 
-## 🟡 Important — needed for full flow
+- [ ] **Rate limiting** — brute-force protection on /auth/login and /auth/admin/login
+  - No throttle now; someone can try infinite passwords
 
-- [ ] **5. GET /booking/:id** — detail view for a single booking
-  - Return full booking + tutor/student profiles + offer title
-  - Accessible only by the student or tutor of that booking
+- [ ] **Input sanitization on free-text fields** — bio, comment, offer title/summary
+  - class-validator strips types but doesn't sanitize XSS in string fields
 
-- [ ] **6. Conflict detection on createBooking**
-  - Before creating, check for overlapping `pending`/`confirmed` bookings for same tutor
-  - Reject with 409 if slot is taken
-
-- [ ] **7. Filter bookings by status**
-  - `GET /booking/student?status=pending` and `GET /booking/tutor?status=confirmed`
-  - Optional `?status=` query param on both list endpoints
-
-- [ ] **8. TutorAvailability**
-  - `POST /user/tutor/availability` — add slot (tutor only)
-  - `GET /user/tutor/:id/availability` — get available slots (public)
-  - `DELETE /user/tutor/availability/:id` — remove slot (tutor only)
+- [ ] **GET /user/me/offers** alias — tutor needs their own offer list without knowing their ID
+  - Already exists as GET /user/tutor/offer/mine — just needs documenting / confirming frontend uses it
 
 ---
 
-## 🟢 Nice to have
+## 🟢 Nice to have (quality of life, ship later)
 
-- [ ] **9. Filter tutors by coin price** — `GET /user/tutors?maxCoins=20`
-  - Replace `maxPrice` (fiat) filter in `getTutorFilteredBy` with `maxCoins` (coin-based)
-
-- [ ] **10. Subjects endpoint** — `GET /subjects` (public)
-  - Seed the subjects table, expose as dropdown data
-
-- [ ] **11. Messages / Chat**
-  - `GET /messages/:userId` — conversation (paginated)
+- [ ] **Messages / Chat**
+  - `GET /messages/:userId` — conversation thread (paginated)
   - `POST /messages` — send message
   - `PATCH /messages/:userId/read` — mark read
+  - Schema already has `messages` table — just needs controller + service
 
-- [ ] **12. Pagination** on `GET /booking/student`, `GET /booking/tutor`, `GET /user/tutors`
+- [ ] **Pagination** on GET /booking/student, GET /booking/tutor, GET /user/tutors
+  - Currently returns all rows; fine for testing, will hurt at scale
+
+- [ ] **Refresh token system** — current JWT expires and user gets logged out with no recovery
+
+- [ ] **Subjects endpoint** — `GET /subjects` (public, seed subjects table, use as dropdown data)
+
+- [ ] **Tutor search by availability date** — `GET /user/tutors?date=2026-06-01`
+  - Students want to find tutors free on a specific day
+
+- [ ] **Booking history summary** — `GET /user/stats` (sessions completed, coins spent/earned, avg rating)
+  - Useful for both student and tutor profile pages
+
+- [ ] **Offer view count / popularity** — track how many times an offer was viewed
+  - Simple increment on GET /offers/:id, helps tutors know what's getting clicks
+
+- [ ] **Admin audit log** — log every admin action (ban, warn, verify) to a table
+  - Right now admin actions are not traceable after the fact
+
+- [ ] **Webhook retry / idempotency** for Midtrans — currently no retry guard on duplicate webhooks
 
 ---
 
 ## ⚠️ Before any demo or deploy
 
-- [ ] **DELETE `devToken()`** from `auth.controller.ts` and `auth.service.ts` (lines marked `// ⚠️ TEMP`)
-
----
-
-## Suggested order
-
-```
-2 → 1 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12
-```
+- [ ] DELETE `devToken()` from `auth.controller.ts` and `auth.service.ts`
+- [ ] REMOVE or gate `POST /admin/users/:id/grant-coins` behind `NODE_ENV !== 'production'`
+- [ ] REMOVE or gate `POST /coins/dev/fulfill/:orderId` behind `NODE_ENV !== 'production'`
+- [ ] Set strong `JWT_SECRET` in prod env (not default/dev value)
+- [ ] Verify `MIDTRANS_IS_PRODUCTION=true` and real server key before payment goes live
