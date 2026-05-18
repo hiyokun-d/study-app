@@ -74,7 +74,11 @@ export class UserController {
     @Param('id') id: string,
     @Body() dto: UpdateTutorOfferDto,
   ) {
-    return this.userService.updateOffer(req.user.userId || req.user.sub, id, dto);
+    return this.userService.updateOffer(
+      req.user.userId || req.user.sub,
+      id,
+      dto,
+    );
   }
 
   @UseGuards(AuthGuard('jwt'))
@@ -84,12 +88,12 @@ export class UserController {
   }
 
   // ---------- Profile ----------
-
   @UseGuards(AuthGuard('jwt'))
   @Post('tutor/verification')
   submitVerification(@Request() req: any, @Body() dto: SubmitVerificationDto) {
     const userId = req.user.userId || req.user.sub;
-    if (!userId) throw new UnauthorizedException('Identification missing in token.');
+    if (!userId)
+      throw new UnauthorizedException('Identification missing in token.');
     return this.userService.submitVerification(userId, dto);
   }
 
@@ -97,7 +101,8 @@ export class UserController {
   @Patch('update/profile')
   updateProfile(@Request() req: any, @Body() updateData: UpdateProfileDTO) {
     const userId = req.user.userId || req.user.sub || req.user.id;
-    if (!userId) throw new UnauthorizedException('Identification missing in token.');
+    if (!userId)
+      throw new UnauthorizedException('Identification missing in token.');
     return this.userService.updateProfile(userId, updateData);
   }
 
