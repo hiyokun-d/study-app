@@ -62,10 +62,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navItem(0, Icons.home_rounded, AppStrings.home),
-          _navItem(1, Icons.calendar_today_rounded, AppStrings.schedule),
-          _navItem(2, Icons.play_circle_rounded, AppStrings.myLearning),
-          _navItem(3, Icons.person_rounded, AppStrings.profile),
+          _buildNavItem(0, Icons.home_rounded, AppStrings.home),
+          _buildNavItem(1, Icons.calendar_today_rounded, AppStrings.schedule),
+          _buildNavItem(2, Icons.play_circle_rounded, AppStrings.myLearning),
+          _buildNavItem(3, Icons.person_rounded, AppStrings.profile),
         ],
       ),
     );
@@ -262,25 +262,8 @@ class _HomeTabState extends State<_HomeTab> {
         mainAxisSpacing: 10,
       ),
       itemCount: topics.length,
-      itemBuilder: (context, i) => Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
-            ),
-            child: Icon(icons[i], color: AppColors.primary),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            topics[i],
-            style: const TextStyle(color: Color(0xFF1A237E), fontSize: 10),
-          ),
-        ],
-      ),
-      itemCount: topics.length,
+      // FIX 1: Removed duplicate itemCount/itemBuilder. FIX 2: Destructure
+      // the record correctly — Icon(Icons[i]) is invalid; use the icon field.
       itemBuilder: (_, i) {
         final (icon, label) = topics[i];
         return Column(
@@ -330,9 +313,9 @@ class _HomeTabState extends State<_HomeTab> {
         padding: const EdgeInsets.all(AppSizes.lg),
         child: Column(
           children: [
-            Text(
+            const Text(
               'Could not load tutors',
-              style: const TextStyle(color: Color(0xFF1A237E), fontSize: 13),
+              style: TextStyle(color: Color(0xFF1A237E), fontSize: 13),
             ),
             const SizedBox(height: 8),
             TextButton.icon(
@@ -354,10 +337,12 @@ class _HomeTabState extends State<_HomeTab> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-        itemCount: teachers.length,
+        // FIX 3: Was referencing undefined `teachers`; use `_tutors`.
+        itemCount: _tutors!.length,
         itemBuilder: (context, i) {
-          final teacher = teachers[i];
-          final expertise = teacher.expertise.isNotEmpty ? teacher.expertise.first : '';
+          // FIX 4: Was `teachers[i]`; use `_tutors![i]`.
+          final tutor = _tutors![i];
+          final expertise = tutor.subjects.isNotEmpty ? tutor.subjects.first : '';
           return Container(
             width: 130,
             margin: const EdgeInsets.only(right: 12),
@@ -365,7 +350,9 @@ class _HomeTabState extends State<_HomeTab> {
             decoration: BoxDecoration(
               color: AppColors.card,
               borderRadius: BorderRadius.circular(24),
-              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
+              boxShadow: const [
+                BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+              ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -377,15 +364,37 @@ class _HomeTabState extends State<_HomeTab> {
                   child: const Icon(Icons.person_rounded, color: AppColors.primary),
                 ),
                 const SizedBox(height: 8),
+                // FIX 5: Was `teacher.name`; use `tutor.name` (or equivalent field).
                 Text(
-                  tutor.overallRating!.toStringAsFixed(1),
+                  tutor.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  expertise,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
                 ),
+                const SizedBox(height: 4),
+                // FIX 6: Was `tutor.overallRating` used on variable named `teacher`.
+                if (tutor.overallRating != null)
+                  Text(
+                    '★ ${tutor.overallRating!.toStringAsFixed(1)}',
+                    style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                  ),
               ],
             ),
-        ],
+          );
+        },
       ),
-    );
+    ); // FIX 7: Added missing closing paren for SizedBox + semicolon.
   }
 
   Widget _buildTutorSkeleton() {
