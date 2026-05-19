@@ -10,6 +10,7 @@ import '../../../core/widgets/common/loading_widget.dart';
 import '../../../core/widgets/inputs/search_input.dart';
 import '../../../models/tutor_profile.dart';
 import 'profile_tab.dart';
+import 'schedule_tab.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -21,27 +22,28 @@ class StudentDashboard extends StatefulWidget {
 class _StudentDashboardState extends State<StudentDashboard> {
   int _currentIndex = 0;
 
-  static const _gradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0xFF1565C0), Color(0xFFD6E8FF)],
-  );
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          Positioned.fill(
-            child: DecoratedBox(decoration: const BoxDecoration(gradient: _gradient)),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF1565C0), Color(0xFFD6E8FF)],
+              ),
+            ),
           ),
           IndexedStack(
             index: _currentIndex,
             children: const [
               _HomeTab(),
-              Center(child: Text(AppStrings.schedule, style: TextStyle(color: Colors.white))),
-              Center(child: Text(AppStrings.messages, style: TextStyle(color: Colors.white))),
+              ScheduleTab(),
+              Center(child: Text(AppStrings.booking, style: TextStyle(color: Colors.white))),
               ProfileTab(),
             ],
           ),
@@ -58,37 +60,48 @@ class _StudentDashboardState extends State<StudentDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(100),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, 10))],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildNavItem(0, Icons.home_rounded, AppStrings.home),
-          _buildNavItem(1, Icons.calendar_today_rounded, AppStrings.schedule),
-          _buildNavItem(2, Icons.message_outlined, AppStrings.messages),
-          _buildNavItem(3, Icons.person_rounded, AppStrings.profile),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, 10)),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(100),
+        child: Row(
+          children: [
+            _buildNavItem(0, Icons.home_rounded, AppStrings.home),
+            _buildNavItem(1, Icons.calendar_today_rounded, AppStrings.schedule),
+            _buildNavItem(2, Icons.book_online_rounded, AppStrings.booking),
+            _buildNavItem(3, Icons.person_rounded, AppStrings.profile),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: isSelected ? AppColors.primary : AppColors.textDisabled),
-          if (!isSelected)
-            Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textDisabled)),
-        ],
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _currentIndex = index),
+        child: SizedBox(
+          height: 64,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: isSelected ? AppColors.primary : AppColors.textDisabled),
+              if (!isSelected)
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 10, color: AppColors.textDisabled),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
-
-// ─── Home Tab ────────────────────────────────────────────────────────────────
 
 class _HomeTab extends StatefulWidget {
   const _HomeTab();
@@ -143,7 +156,7 @@ class _HomeTabState extends State<_HomeTab> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    final displayName = AuthState.instance.displayName;
+    final auth = AuthState.instance;
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -153,13 +166,50 @@ class _HomeTabState extends State<_HomeTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Good Morning,',
-              style: AppTypography.subtitle(context).copyWith(color: Colors.white70),
-            ),
-            Text(
-              displayName,
-              style: AppTypography.headline(context).copyWith(color: Colors.white),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Good Morning,',
+                        style: AppTypography.subtitle(context)
+                            .copyWith(color: Colors.white70),
+                      ),
+                      Text(
+                        auth.displayName,
+                        style: AppTypography.headline(context)
+                            .copyWith(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.monetization_on_rounded,
+                          color: Color(0xFFFFD700), size: 18),
+                      SizedBox(width: 6),
+                      Text(
+                        '0',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppSizes.lg),
             Container(
@@ -177,9 +227,7 @@ class _HomeTabState extends State<_HomeTab> {
                 children: [
                   SearchInput(
                     hint: 'Search tutor...',
-                    onChanged: (value) {
-                      // TODO: wire to _loadTutors(search: value) with debounce
-                    },
+                    onChanged: (value) {},
                   ),
                   const Divider(height: 32),
                   _buildUpcomingDetail(context),
@@ -201,7 +249,11 @@ class _HomeTabState extends State<_HomeTab> {
             children: [
               const Text(
                 'Upcoming Session',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
               ),
               Text(
                 'No upcoming session',
@@ -219,7 +271,9 @@ class _HomeTabState extends State<_HomeTab> {
               padding: EdgeInsets.zero,
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('Book', style: TextStyle(fontSize: 13)),
           ),
@@ -357,7 +411,12 @@ class _HomeTabState extends State<_HomeTab> {
                 CircleAvatar(
                   radius: 26,
                   backgroundColor: AppColors.primary.withOpacity(0.1),
-                  child: const Icon(Icons.person_rounded, color: AppColors.primary),
+                  backgroundImage: tutor.avatarUrl != null
+                      ? NetworkImage(tutor.avatarUrl!)
+                      : null,
+                  child: tutor.avatarUrl == null
+                      ? const Icon(Icons.person_rounded, color: AppColors.primary)
+                      : null,
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -400,13 +459,18 @@ class _HomeTabState extends State<_HomeTab> {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           ShimmerLoading(
-            child: CircleAvatar(radius: 25, backgroundColor: AppColors.surfaceContainerHigh),
+            child: CircleAvatar(
+              radius: 25,
+              backgroundColor: AppColors.surfaceContainerHigh,
+            ),
           ),
           const SizedBox(height: 8),
           ShimmerLoading(

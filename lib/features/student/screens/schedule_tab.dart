@@ -6,10 +6,9 @@ import '../../../core/widgets/common/empty_state.dart';
 import '../../../core/widgets/common/loading_widget.dart';
 import '../../../models/booking_model.dart';
 
-// TODO: replace with real API call via UserApiService
 Future<List<Booking>> _fetchBookings() async {
   await Future.delayed(const Duration(milliseconds: 800));
-  return []; // hook up to UserApiService.instance.getBookings()
+  return [];
 }
 
 class ScheduleTab extends StatefulWidget {
@@ -47,14 +46,23 @@ class _ScheduleTabState extends State<ScheduleTab>
   }
 
   Future<void> _load() async {
-    setState(() { _isLoading = true; _error = null; });
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
       final data = await _fetchBookings();
       if (!mounted) return;
-      setState(() { _bookings = data; _isLoading = false; });
+      setState(() {
+        _bookings = data;
+        _isLoading = false;
+      });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.toString(); _isLoading = false; });
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
     }
   }
 
@@ -63,53 +71,50 @@ class _ScheduleTabState extends State<ScheduleTab>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildHeader(context),
-        _buildTabBar(),
-        Expanded(child: _buildBody()),
-      ],
-    );
-  }
-
-  // ── Header ────────────────────────────────────────────────────────────────
-
-  Widget _buildHeader(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSizes.lg, AppSizes.lg, AppSizes.lg, AppSizes.md,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                'My Schedule',
-                style: AppTypography.headline(context)
-                    .copyWith(color: Colors.white),
-              ),
-            ),
-            // Book new session shortcut
-            ElevatedButton.icon(
-              onPressed: () {
-                // TODO: navigate to booking flow
-              },
-              icon: const Icon(Icons.add_rounded, size: 16),
-              label: const Text('Book', style: TextStyle(fontSize: 13)),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-        ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Column(
+        children: [
+          _buildHeader(context),
+          _buildTabBar(),
+          const SizedBox(height: 8),
+          Expanded(child: _buildBody()),
+        ],
       ),
     );
   }
 
-  // ── Tab bar ───────────────────────────────────────────────────────────────
+  Widget _buildHeader(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSizes.lg, topPadding + AppSizes.lg, AppSizes.lg, AppSizes.md,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'My Schedule',
+              style: AppTypography.headline(context).copyWith(color: Colors.white),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: const Text('Book', style: TextStyle(fontSize: 13)),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildTabBar() {
     return Container(
@@ -129,63 +134,61 @@ class _ScheduleTabState extends State<ScheduleTab>
         indicatorSize: TabBarIndicatorSize.tab,
         indicatorPadding: const EdgeInsets.all(4),
         dividerColor: Colors.transparent,
-        labelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
+        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         labelColor: AppColors.primary,
         unselectedLabelColor: Colors.white,
-        tabs: _tabs
-            .map((s) => Tab(text: s.label))
-            .toList(),
+        tabs: _tabs.map((s) => Tab(text: s.label)).toList(),
       ),
     );
   }
 
-  // ── Body ──────────────────────────────────────────────────────────────────
-
   Widget _buildBody() {
-    if (_isLoading) {
-      return ListView.builder(
-        padding: const EdgeInsets.fromLTRB(
-            AppSizes.lg, AppSizes.md, AppSizes.lg, 110),
-        itemCount: 4,
-        itemBuilder: (_, __) => _BookingSkeleton(),
-      );
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Could not load bookings',
-                style: TextStyle(color: Color(0xFF1A237E), fontSize: 13)),
-            const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: _load,
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
     return TabBarView(
       controller: _tabController,
       children: _tabs.map((status) {
+        if (_isLoading) {
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(
+              AppSizes.lg, AppSizes.md, AppSizes.lg, 110,
+            ),
+            itemCount: 4,
+            itemBuilder: (_, __) => const _BookingSkeleton(),
+          );
+        }
+
+        if (_error != null) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Could not load bookings',
+                  style: TextStyle(color: Color(0xFF1A237E), fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
         final items = _filtered(status);
         if (items.isEmpty) {
           return EmptyState(
             message: 'No ${status.label.toLowerCase()} sessions',
           );
         }
+
         return RefreshIndicator(
           onRefresh: _load,
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(
-                AppSizes.lg, AppSizes.md, AppSizes.lg, 110),
+              AppSizes.lg, AppSizes.md, AppSizes.lg, 110,
+            ),
             itemCount: items.length,
             itemBuilder: (_, i) => _BookingCard(booking: items[i]),
           ),
@@ -194,8 +197,6 @@ class _ScheduleTabState extends State<ScheduleTab>
     );
   }
 }
-
-// ─── Booking Card ─────────────────────────────────────────────────────────────
 
 class _BookingCard extends StatelessWidget {
   final Booking booking;
@@ -217,10 +218,8 @@ class _BookingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row — tutor info + status badge
           Row(
             children: [
-              // Avatar
               CircleAvatar(
                 radius: 22,
                 backgroundColor: AppColors.primary.withOpacity(0.1),
@@ -228,8 +227,7 @@ class _BookingCard extends StatelessWidget {
                     ? NetworkImage(booking.tutorAvatarUrl!)
                     : null,
                 child: booking.tutorAvatarUrl == null
-                    ? const Icon(Icons.person_rounded,
-                        color: AppColors.primary, size: 22)
+                    ? const Icon(Icons.person_rounded, color: AppColors.primary, size: 22)
                     : null,
               ),
               const SizedBox(width: 12),
@@ -247,8 +245,7 @@ class _BookingCard extends StatelessWidget {
                     ),
                     Text(
                       booking.subject,
-                      style: const TextStyle(
-                          fontSize: 12, color: AppColors.textSecondary),
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -259,7 +256,6 @@ class _BookingCard extends StatelessWidget {
           const SizedBox(height: 14),
           const Divider(height: 1),
           const SizedBox(height: 14),
-          // Detail row — date, time, duration, price
           Row(
             children: [
               _DetailChip(
@@ -282,21 +278,20 @@ class _BookingCard extends StatelessWidget {
               ),
             ],
           ),
-          // Action buttons — only for upcoming
           if (booking.status == BookingStatus.upcoming) ...[
             const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
-                      // TODO: cancel booking
-                    },
+                    onPressed: () {},
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.redAccent,
+                      minimumSize: Size.zero,
                       side: const BorderSide(color: Colors.redAccent),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                     child: const Text('Cancel', style: TextStyle(fontSize: 13)),
@@ -305,12 +300,12 @@ class _BookingCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: join session / view detail
-                    },
+                    onPressed: () {},
                     style: ElevatedButton.styleFrom(
+                      minimumSize: Size.zero,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                     child: const Text('Detail', style: TextStyle(fontSize: 13)),
@@ -333,8 +328,6 @@ class _BookingCard extends StatelessWidget {
   }
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-
 class _StatusBadge extends StatelessWidget {
   final BookingStatus status;
 
@@ -343,10 +336,10 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, bg) = switch (status) {
-      BookingStatus.upcoming   => (const Color(0xFF1565C0), const Color(0xFFE3F2FD)),
-      BookingStatus.ongoing    => (const Color(0xFF2E7D32), const Color(0xFFE8F5E9)),
-      BookingStatus.completed  => (const Color(0xFF6A1B9A), const Color(0xFFF3E5F5)),
-      BookingStatus.cancelled  => (Colors.redAccent,        const Color(0xFFFFEBEE)),
+      BookingStatus.upcoming  => (const Color(0xFF1565C0), const Color(0xFFE3F2FD)),
+      BookingStatus.ongoing   => (const Color(0xFF2E7D32), const Color(0xFFE8F5E9)),
+      BookingStatus.completed => (const Color(0xFF6A1B9A), const Color(0xFFF3E5F5)),
+      BookingStatus.cancelled => (Colors.redAccent,        const Color(0xFFFFEBEE)),
     };
 
     return Container(
@@ -363,8 +356,6 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// ─── Detail Chip ──────────────────────────────────────────────────────────────
-
 class _DetailChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -378,16 +369,15 @@ class _DetailChip extends StatelessWidget {
       children: [
         Icon(icon, size: 13, color: AppColors.textSecondary),
         const SizedBox(width: 4),
-        Text(label,
-            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
       ],
     );
   }
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-
 class _BookingSkeleton extends StatelessWidget {
+  const _BookingSkeleton();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -407,7 +397,9 @@ class _BookingSkeleton extends StatelessWidget {
             children: [
               ShimmerLoading(
                 child: CircleAvatar(
-                    radius: 22, backgroundColor: AppColors.surfaceContainerHigh),
+                  radius: 22,
+                  backgroundColor: AppColors.surfaceContainerHigh,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -416,7 +408,8 @@ class _BookingSkeleton extends StatelessWidget {
                   children: [
                     ShimmerLoading(
                       child: Container(
-                        height: 12, width: 120,
+                        height: 12,
+                        width: 120,
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(6),
@@ -426,7 +419,8 @@ class _BookingSkeleton extends StatelessWidget {
                     const SizedBox(height: 6),
                     ShimmerLoading(
                       child: Container(
-                        height: 10, width: 80,
+                        height: 10,
+                        width: 80,
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(5),
@@ -441,7 +435,8 @@ class _BookingSkeleton extends StatelessWidget {
           const SizedBox(height: 14),
           ShimmerLoading(
             child: Container(
-              height: 10, width: double.infinity,
+              height: 10,
+              width: double.infinity,
               decoration: BoxDecoration(
                 color: AppColors.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(5),
