@@ -6,25 +6,22 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { PrismaService } from 'src/prisma.service';
+import { DailyService } from 'src/daily/daily.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { ProposeRescheduleDto } from './dto/propose-reschedule.dto';
+import { ProposePriceDto } from './dto/propose-price.dto';
+
+const BOOKING_EXPIRY_MS = 60 * 60_000;        // 1 hour — tutor auto-decline
+const PRICE_PROPOSAL_EXPIRY_MS = 2 * 60 * 60_000; // 2 hours — student must respond
 
 @Injectable()
 export class BookingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private daily: DailyService,
+  ) {}
 
   // ─── helpers ────────────────────────────────────────────────────────────────
-
-  private buildMeetingUrl(bookingId: string): { meeting_url: string; room_password: string } {
-    const hash = crypto
-      .createHash('sha256')
-      .update(bookingId + (process.env.JWT_SECRET ?? 'secret'))
-      .digest('hex');
-    return {
-      meeting_url: `https://meet.jit.si/studyapp-${bookingId}`,
-      room_password: hash.slice(0, 8),
-    };
-  }
 
   private inCallWindow(start_at: Date, end_at: Date): boolean {
     const now = Date.now();
@@ -58,16 +55,19 @@ export class BookingService {
         return 'Booking was cancelled. Coins have been refunded.';
       case 'declined':
         return 'Booking was declined by the tutor. Coins have been refunded.';
+      case 'expired':
+        return 'Booking request expired — tutor did not respond in time. Coins have been refunded.';
       default:
         return '';
     }
   }
 
-  private tutorActions(status: string): string[] {
+  private tutorActions(status: string, hasPriceProposal: boolean): string[] {
+    if (hasPriceProposal) return []; // waiting on student response — tutor can't act
     switch (status) {
-      case 'pending':    return ['confirm', 'decline', 'propose-reschedule'];
-      case 'confirmed':  return ['complete', 'propose-reschedule'];
-      default:           return [];
+      case 'pending':   return ['confirm', 'decline', 'propose-reschedule', 'propose-price'];
+      case 'confirmed': return ['complete', 'propose-reschedule'];
+      default:          return [];
     }
   }
 
@@ -153,6 +153,8 @@ export class BookingService {
       );
     }
 
+    const expiresAt = new Date(Date.now() + BOOKING_EXPIRY_MS);
+
     const [booking] = await this.prisma.$transaction([
       this.prisma.bookings.create({
         data: {
@@ -166,6 +168,8 @@ export class BookingService {
           price: 0,
           coins_cost: coinsCost,
           status: 'pending',
+          description: dto.description,
+          expires_at: expiresAt,
         },
         select: {
           id: true,
@@ -176,6 +180,8 @@ export class BookingService {
           duration_minutes: true,
           coins_cost: true,
           status: true,
+          description: true,
+          expires_at: true,
           created_at: true,
         },
       }),
@@ -199,6 +205,7 @@ export class BookingService {
             student_id: studentId,
             duration_minutes: durationMinutes,
             coins_cost: coinsCost,
+            description: dto.description ?? null,
           },
         },
       }),
@@ -260,10 +267,6 @@ export class BookingService {
     if (!isStudent && !isTutor) throw new ForbiddenException('Not your booking.');
 
     const status = booking.status as string;
-    const joinInfo =
-      status === 'confirmed' && this.inCallWindow(booking.start_at, booking.end_at)
-        ? this.buildMeetingUrl(booking.id)
-        : null;
 
     const rescheduleProposal =
       status === 'rescheduling'
@@ -275,6 +278,16 @@ export class BookingService {
           }
         : null;
 
+    const priceProposal = booking.price_proposed_coins
+      ? {
+          proposed_coins: booking.price_proposed_coins,
+          message: booking.price_proposal_message,
+          expires_at: booking.price_proposal_expires_at,
+          original_coins: booking.coins_cost,
+          difference: booking.price_proposed_coins - (booking.coins_cost ?? 0),
+        }
+      : null;
+
     const base = {
       id: booking.id,
       status: booking.status,
@@ -282,11 +295,13 @@ export class BookingService {
       end_at: booking.end_at,
       duration_minutes: booking.duration_minutes,
       coins_cost: booking.coins_cost,
+      description: booking.description,
+      expires_at: booking.expires_at,
       created_at: booking.created_at,
       updated_at: booking.updated_at,
       offer: booking.tutor_offers,
-      join_info: joinInfo,
       reschedule_proposal: rescheduleProposal,
+      price_proposal: priceProposal,
       next_action: this.nextActionHint(status, booking.start_at, isStudent ? 'student' : 'tutor'),
     };
 
@@ -303,7 +318,7 @@ export class BookingService {
       ...base,
       student: booking.profiles_bookings_student_idToprofiles,
       coins_to_earn: booking.coins_cost,
-      available_actions: this.tutorActions(status),
+      available_actions: this.tutorActions(status, !!booking.price_proposed_coins),
     };
   }
 
@@ -320,17 +335,15 @@ export class BookingService {
         duration_minutes: true,
         coins_cost: true,
         status: true,
-        created_at: true,
+        description: true,
+        expires_at: true,
+        price_proposed_coins: true,
+        price_proposal_expires_at: true,
         reschedule_proposed_start: true,
         reschedule_proposed_end: true,
+        created_at: true,
         profiles_bookings_tutor_idToprofiles: {
-          select: {
-            id: true,
-            full_name: true,
-            avatar_url: true,
-            username: true,
-            user_status: true,
-          },
+          select: { id: true, full_name: true, avatar_url: true, username: true, user_status: true },
         },
         tutor_offers: { select: { title: true } },
       },
@@ -351,17 +364,16 @@ export class BookingService {
         duration_minutes: true,
         coins_cost: true,
         status: true,
-        created_at: true,
+        description: true,
+        expires_at: true,
+        price_proposed_coins: true,
+        price_proposal_message: true,
+        price_proposal_expires_at: true,
         reschedule_proposed_start: true,
         reschedule_proposed_end: true,
+        created_at: true,
         profiles_bookings_student_idToprofiles: {
-          select: {
-            id: true,
-            full_name: true,
-            avatar_url: true,
-            username: true,
-            user_status: true,
-          },
+          select: { id: true, full_name: true, avatar_url: true, username: true, user_status: true },
         },
         tutor_offers: { select: { title: true } },
       },
@@ -369,7 +381,23 @@ export class BookingService {
     });
   }
 
-  // ─── join call ───────────────────────────────────────────────────────────────
+  // ─── join call ──────────────────────────────────────────────────────────────
+  // Primary: Jitsi (always works, no API key needed)
+  // Upgrade: Daily.co when DAILY_API_KEY + DAILY_DOMAIN are set in env
+
+  private jitsiJoin(bookingId: string) {
+    const hash = crypto
+      .createHash('sha256')
+      .update(bookingId + (process.env.JWT_SECRET ?? 'secret'))
+      .digest('hex');
+    return {
+      provider: 'jitsi' as const,
+      meeting_url: `https://meet.jit.si/studyapp-${bookingId}`,
+      room_password: hash.slice(0, 8),
+      token: null,
+      room_name: `studyapp-${bookingId}`,
+    };
+  }
 
   async getJoinInfo(bookingId: string, userId: string) {
     const booking = await this.prisma.bookings.findUnique({
@@ -381,6 +409,7 @@ export class BookingService {
         status: true,
         start_at: true,
         end_at: true,
+        room_name: true,
         profiles_bookings_student_idToprofiles: { select: { full_name: true } },
         profiles_bookings_tutor_idToprofiles: { select: { full_name: true } },
       },
@@ -406,15 +435,191 @@ export class BookingService {
       throw new BadRequestException('Session window has ended.');
     }
 
-    const { meeting_url, room_password } = this.buildMeetingUrl(bookingId);
-    return {
-      meeting_url,
-      room_password,
+    const base = {
       start_at: booking.start_at,
       end_at: booking.end_at,
       student_name: booking.profiles_bookings_student_idToprofiles.full_name,
       tutor_name: booking.profiles_bookings_tutor_idToprofiles.full_name,
     };
+
+    // Use Daily.co only when fully configured AND room was created
+    const useDailyco =
+      booking.room_name &&
+      process.env.DAILY_API_KEY &&
+      process.env.DAILY_DOMAIN;
+
+    if (useDailyco) {
+      const { token, room_url } = await this.daily.createToken(
+        booking.room_name!,
+        userId,
+        booking.end_at,
+        false,
+      );
+      return { ...base, provider: 'daily' as const, token, meeting_url: room_url, room_name: booking.room_name, room_password: null };
+    }
+
+    // Default: Jitsi — no API key needed, open in new tab
+    return { ...base, ...this.jitsiJoin(bookingId) };
+  }
+
+  // ─── price negotiation ───────────────────────────────────────────────────────
+
+  async proposePrice(bookingId: string, tutorId: string, dto: ProposePriceDto) {
+    const booking = await this.prisma.bookings.findUnique({ where: { id: bookingId } });
+    if (!booking) throw new NotFoundException('Booking not found.');
+    if (booking.tutor_id !== tutorId) {
+      throw new ForbiddenException('Only the tutor can propose a price change.');
+    }
+    if (booking.status !== 'pending') {
+      throw new BadRequestException('Price can only be proposed on pending bookings.');
+    }
+    if (dto.proposed_coins <= (booking.coins_cost ?? 0)) {
+      throw new BadRequestException('Proposed price must be higher than current price.');
+    }
+    if (booking.price_proposed_coins) {
+      throw new BadRequestException('A price proposal is already pending.');
+    }
+
+    const expiresAt = new Date(Date.now() + PRICE_PROPOSAL_EXPIRY_MS);
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.bookings.update({
+        where: { id: bookingId },
+        data: {
+          price_proposed_coins: dto.proposed_coins,
+          price_proposal_message: dto.message,
+          price_proposal_expires_at: expiresAt,
+          updated_at: new Date(),
+        },
+        select: {
+          id: true,
+          coins_cost: true,
+          price_proposed_coins: true,
+          price_proposal_message: true,
+          price_proposal_expires_at: true,
+        },
+      }),
+      this.prisma.notifications.create({
+        data: {
+          profile_id: booking.student_id,
+          type: 'PRICE_PROPOSED',
+          payload: {
+            booking_id: bookingId,
+            original_coins: booking.coins_cost,
+            proposed_coins: dto.proposed_coins,
+            message: dto.message ?? null,
+            expires_at: expiresAt,
+          },
+        },
+      }),
+    ]);
+
+    return updated;
+  }
+
+  async acceptPrice(bookingId: string, studentId: string) {
+    const booking = await this.prisma.bookings.findUnique({ where: { id: bookingId } });
+    if (!booking) throw new NotFoundException('Booking not found.');
+    if (booking.student_id !== studentId) {
+      throw new ForbiddenException('Only the student can accept a price proposal.');
+    }
+    if (!booking.price_proposed_coins) {
+      throw new BadRequestException('No price proposal on this booking.');
+    }
+    if (booking.price_proposal_expires_at && booking.price_proposal_expires_at < new Date()) {
+      throw new BadRequestException('Price proposal has expired.');
+    }
+
+    const diff = booking.price_proposed_coins - (booking.coins_cost ?? 0);
+
+    const student = await this.prisma.profiles.findUnique({
+      where: { id: studentId },
+      select: { coins_balance: true },
+    });
+    if (!student) throw new NotFoundException('Student not found.');
+    if (student.coins_balance < diff) {
+      throw new BadRequestException(
+        `Insufficient coins for price difference. Need ${diff} more coins.`,
+      );
+    }
+
+    const ops: any[] = [
+      this.prisma.bookings.update({
+        where: { id: bookingId },
+        data: {
+          coins_cost: booking.price_proposed_coins,
+          price_proposed_coins: null,
+          price_proposal_message: null,
+          price_proposal_expires_at: null,
+          updated_at: new Date(),
+        },
+        select: { id: true, coins_cost: true, status: true },
+      }),
+    ];
+
+    if (diff > 0) {
+      ops.push(
+        this.prisma.profiles.update({
+          where: { id: studentId },
+          data: { coins_balance: { decrement: diff } },
+        }),
+        this.prisma.coin_transactions.create({
+          data: {
+            profile_id: studentId,
+            amount: -diff,
+            kind: 'BOOKING_PAYMENT',
+            ref_id: bookingId,
+            note: 'Price proposal accepted — additional coins deducted',
+          },
+        }),
+      );
+    }
+
+    ops.push(
+      this.prisma.notifications.create({
+        data: {
+          profile_id: booking.tutor_id,
+          type: 'PRICE_ACCEPTED',
+          payload: { booking_id: bookingId, new_coins_cost: booking.price_proposed_coins },
+        },
+      }),
+    );
+
+    const [result] = await this.prisma.$transaction(ops);
+    return result;
+  }
+
+  async rejectPrice(bookingId: string, studentId: string) {
+    const booking = await this.prisma.bookings.findUnique({ where: { id: bookingId } });
+    if (!booking) throw new NotFoundException('Booking not found.');
+    if (booking.student_id !== studentId) {
+      throw new ForbiddenException('Only the student can reject a price proposal.');
+    }
+    if (!booking.price_proposed_coins) {
+      throw new BadRequestException('No price proposal on this booking.');
+    }
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.bookings.update({
+        where: { id: bookingId },
+        data: {
+          price_proposed_coins: null,
+          price_proposal_message: null,
+          price_proposal_expires_at: null,
+          updated_at: new Date(),
+        },
+        select: { id: true, coins_cost: true, status: true },
+      }),
+      this.prisma.notifications.create({
+        data: {
+          profile_id: booking.tutor_id,
+          type: 'PRICE_REJECTED',
+          payload: { booking_id: bookingId, student_id: studentId },
+        },
+      }),
+    ]);
+
+    return updated;
   }
 
   // ─── reschedule ──────────────────────────────────────────────────────────────
@@ -508,8 +713,7 @@ export class BookingService {
     }
 
     const newDuration = Math.round(
-      (booking.reschedule_proposed_end.getTime() - booking.reschedule_proposed_start.getTime()) /
-        60_000,
+      (booking.reschedule_proposed_end.getTime() - booking.reschedule_proposed_start.getTime()) / 60_000,
     );
 
     const [updated] = await this.prisma.$transaction([
@@ -601,7 +805,7 @@ export class BookingService {
 
     const isOwner = booking.student_id === userId || booking.tutor_id === userId;
     if (!isOwner) throw new ForbiddenException('Not your booking.');
-    if (['completed', 'cancelled'].includes(booking.status as string)) {
+    if (['completed', 'cancelled', 'expired'].includes(booking.status as string)) {
       throw new ForbiddenException(`Cannot cancel a ${booking.status} booking.`);
     }
 
@@ -632,8 +836,7 @@ export class BookingService {
       );
     }
 
-    const notifyId =
-      userId === booking.student_id ? booking.tutor_id : booking.student_id;
+    const notifyId = userId === booking.student_id ? booking.tutor_id : booking.student_id;
     ops.push(
       this.prisma.notifications.create({
         data: {
@@ -657,12 +860,18 @@ export class BookingService {
     if (booking.status !== 'pending') {
       throw new ForbiddenException('Only pending bookings can be confirmed.');
     }
+    if (booking.price_proposed_coins) {
+      throw new BadRequestException('Resolve the pending price proposal before confirming.');
+    }
+
+    // Create Daily.co room before transaction
+    const roomName = await this.daily.createRoom(bookingId, booking.end_at);
 
     const [result] = await this.prisma.$transaction([
       this.prisma.bookings.update({
         where: { id: bookingId },
-        data: { status: 'confirmed', updated_at: new Date() },
-        select: { id: true, status: true },
+        data: { status: 'confirmed', room_name: roomName, updated_at: new Date() },
+        select: { id: true, status: true, room_name: true },
       }),
       this.prisma.notifications.create({
         data: {

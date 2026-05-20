@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { EncryptionService } from 'src/common/encryption/encryption.service';
+import { DailyService } from 'src/daily/daily.service';
 import { VerifyTutorDto } from './dto/verify-tutor.dto';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { ProcessWithdrawalDto } from './dto/process-withdrawal.dto';
@@ -20,6 +21,7 @@ export class AdminService {
   constructor(
     private prisma: PrismaService,
     private encryption: EncryptionService,
+    private daily: DailyService,
   ) {}
 
   private generateAdminId(): string {
@@ -661,6 +663,39 @@ export class AdminService {
     ]);
 
     return { data: bookings, total, page, limit };
+  }
+
+  async getBookingJoinInfo(bookingId: string, adminId: string) {
+    const booking = await this.prisma.bookings.findUnique({
+      where: { id: bookingId },
+      select: { id: true, status: true, room_name: true, start_at: true, end_at: true },
+    });
+    if (!booking) throw new NotFoundException('Booking not found.');
+    if (booking.status !== 'confirmed') {
+      throw new BadRequestException('Booking must be confirmed to join.');
+    }
+
+    const base = { start_at: booking.start_at, end_at: booking.end_at };
+
+    // Daily.co with owner token when configured
+    if (booking.room_name && process.env.DAILY_API_KEY && process.env.DAILY_DOMAIN) {
+      const { token, room_url } = await this.daily.createToken(booking.room_name, adminId, booking.end_at, true);
+      return { ...base, provider: 'daily', token, meeting_url: room_url, room_name: booking.room_name, room_password: null };
+    }
+
+    // Jitsi fallback
+    const hash = require('crypto')
+      .createHash('sha256')
+      .update(bookingId + (process.env.JWT_SECRET ?? 'secret'))
+      .digest('hex');
+    return {
+      ...base,
+      provider: 'jitsi',
+      token: null,
+      meeting_url: `https://meet.jit.si/studyapp-${bookingId}`,
+      room_name: `studyapp-${bookingId}`,
+      room_password: hash.slice(0, 8),
+    };
   }
 
   async getBookingDetail(bookingId: string) {

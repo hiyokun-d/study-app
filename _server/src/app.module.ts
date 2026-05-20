@@ -13,6 +13,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OffersModule } from './offers/offers.module';
 import { MessagesModule } from './messages/messages.module';
 import { InternalModule } from './internal/internal.module';
+import { DailyModule } from './daily/daily.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { InternalModule } from './internal/internal.module';
     OffersModule,
     MessagesModule,
     InternalModule,
+    DailyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

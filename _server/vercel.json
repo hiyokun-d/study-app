@@ -16,6 +16,10 @@
     {
       "path": "/internal/notify-upcoming-sessions",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/internal/process-expirations",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
