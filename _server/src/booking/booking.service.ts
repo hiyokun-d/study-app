@@ -2,11 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import * as crypto from 'crypto';
 import { PrismaService } from 'src/prisma.service';
-import { DailyService } from 'src/daily/daily.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { ProposeRescheduleDto } from './dto/propose-reschedule.dto';
 import { ProposePriceDto } from './dto/propose-price.dto';
@@ -16,22 +15,17 @@ const PRICE_PROPOSAL_EXPIRY_MS = 2 * 60 * 60_000; // 2 hours — student must re
 
 @Injectable()
 export class BookingService {
-  constructor(
-    private prisma: PrismaService,
-    private daily: DailyService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   // ─── helpers ────────────────────────────────────────────────────────────────
 
-  private inCallWindow(start_at: Date, end_at: Date): boolean {
-    const now = Date.now();
-    return (
-      now >= start_at.getTime() - 15 * 60_000 &&
-      now <= end_at.getTime() + 30 * 60_000
-    );
-  }
-
-  private nextActionHint(status: string, start_at: Date, role: 'student' | 'tutor'): string {
+  private nextActionHint(
+    status: string,
+    start_at: Date,
+    role: 'student' | 'tutor',
+    userId?: string,
+    rescheduleRequestedBy?: string | null,
+  ): string {
     const now = new Date();
     switch (status) {
       case 'pending':
@@ -43,10 +37,12 @@ export class BookingService {
         if (mins > 0) return `Session starts in ${mins} minute(s).`;
         return 'Session is active — join the call.';
       }
-      case 'rescheduling':
-        return role === 'student'
-          ? 'Tutor proposed a reschedule. Accept or reject below.'
-          : 'Waiting for student to accept your reschedule proposal.';
+      case 'rescheduling': {
+        const iProposed = userId && rescheduleRequestedBy === userId;
+        return iProposed
+          ? 'Waiting for the other party to accept your reschedule proposal.'
+          : 'A reschedule has been proposed. Accept or reject below.';
+      }
       case 'completed':
         return role === 'student'
           ? 'Session completed. You can now leave a review.'
@@ -74,6 +70,15 @@ export class BookingService {
   // ─── create ─────────────────────────────────────────────────────────────────
 
   async createBooking(studentId: string, dto: CreateBookingDto) {
+    try {
+      return await this._createBooking(studentId, dto);
+    } catch (e) {
+      console.error('[createBooking ERROR]', e);
+      throw e;
+    }
+  }
+
+  private async _createBooking(studentId: string, dto: CreateBookingDto) {
     if (!dto.tutorOfferId && !dto.tutorId) {
       throw new BadRequestException('Provide either tutorOfferId or tutorId.');
     }
@@ -302,7 +307,7 @@ export class BookingService {
       offer: booking.tutor_offers,
       reschedule_proposal: rescheduleProposal,
       price_proposal: priceProposal,
-      next_action: this.nextActionHint(status, booking.start_at, isStudent ? 'student' : 'tutor'),
+      next_action: this.nextActionHint(status, booking.start_at, isStudent ? 'student' : 'tutor', userId, booking.reschedule_requested_by),
     };
 
     if (isStudent) {
@@ -322,11 +327,12 @@ export class BookingService {
     };
   }
 
-  async getStudentBookings(studentId: string, status?: string) {
+  async getStudentBookings(studentId: string, status?: string, from?: string, to?: string) {
     return this.prisma.bookings.findMany({
       where: {
         student_id: studentId,
         ...(status ? { status: status as any } : {}),
+        ...((from || to) ? { start_at: { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to) }) } } : {}),
       },
       select: {
         id: true,
@@ -351,11 +357,12 @@ export class BookingService {
     });
   }
 
-  async getTutorBookings(tutorId: string, status?: string) {
+  async getTutorBookings(tutorId: string, status?: string, from?: string, to?: string) {
     return this.prisma.bookings.findMany({
       where: {
         tutor_id: tutorId,
         ...(status ? { status: status as any } : {}),
+        ...((from || to) ? { start_at: { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to) }) } } : {}),
       },
       select: {
         id: true,
@@ -382,22 +389,6 @@ export class BookingService {
   }
 
   // ─── join call ──────────────────────────────────────────────────────────────
-  // Primary: Jitsi (always works, no API key needed)
-  // Upgrade: Daily.co when DAILY_API_KEY + DAILY_DOMAIN are set in env
-
-  private jitsiJoin(bookingId: string) {
-    const hash = crypto
-      .createHash('sha256')
-      .update(bookingId + (process.env.JWT_SECRET ?? 'secret'))
-      .digest('hex');
-    return {
-      provider: 'jitsi' as const,
-      meeting_url: `https://meet.jit.si/studyapp-${bookingId}`,
-      room_password: hash.slice(0, 8),
-      token: null,
-      room_name: `studyapp-${bookingId}`,
-    };
-  }
 
   async getJoinInfo(bookingId: string, userId: string) {
     const booking = await this.prisma.bookings.findUnique({
@@ -409,7 +400,6 @@ export class BookingService {
         status: true,
         start_at: true,
         end_at: true,
-        room_name: true,
         profiles_bookings_student_idToprofiles: { select: { full_name: true } },
         profiles_bookings_tutor_idToprofiles: { select: { full_name: true } },
       },
@@ -423,43 +413,19 @@ export class BookingService {
       throw new BadRequestException('Booking must be confirmed to join the call.');
     }
 
-    const now = Date.now();
-    const windowStart = booking.start_at.getTime() - 15 * 60_000;
-    const windowEnd = booking.end_at.getTime() + 30 * 60_000;
+    const studentName = booking.profiles_bookings_student_idToprofiles.full_name;
+    const tutorName = booking.profiles_bookings_tutor_idToprofiles.full_name;
+    const displayName = booking.tutor_id === userId ? tutorName : studentName;
 
-    if (now < windowStart) {
-      const mins = Math.round((windowStart - now) / 60_000);
-      throw new BadRequestException(`Call opens ${mins} minute(s) before the session starts.`);
-    }
-    if (now > windowEnd) {
-      throw new BadRequestException('Session window has ended.');
-    }
-
-    const base = {
+    return {
       start_at: booking.start_at,
       end_at: booking.end_at,
-      student_name: booking.profiles_bookings_student_idToprofiles.full_name,
-      tutor_name: booking.profiles_bookings_tutor_idToprofiles.full_name,
+      student_name: studentName,
+      tutor_name: tutorName,
+      display_name: displayName,
+      // TODO: replace with per-room solution (LiveKit) when moving out of testing
+      meeting_url: process.env.WHEREBY_ROOM_URL ?? 'https://whereby.com/lern',
     };
-
-    // Use Daily.co only when fully configured AND room was created
-    const useDailyco =
-      booking.room_name &&
-      process.env.DAILY_API_KEY &&
-      process.env.DAILY_DOMAIN;
-
-    if (useDailyco) {
-      const { token, room_url } = await this.daily.createToken(
-        booking.room_name!,
-        userId,
-        booking.end_at,
-        false,
-      );
-      return { ...base, provider: 'daily' as const, token, meeting_url: room_url, room_name: booking.room_name, room_password: null };
-    }
-
-    // Default: Jitsi — no API key needed, open in new tab
-    return { ...base, ...this.jitsiJoin(bookingId) };
   }
 
   // ─── price negotiation ───────────────────────────────────────────────────────
@@ -624,12 +590,11 @@ export class BookingService {
 
   // ─── reschedule ──────────────────────────────────────────────────────────────
 
-  async proposeReschedule(bookingId: string, tutorId: string, dto: ProposeRescheduleDto) {
+  async proposeReschedule(bookingId: string, userId: string, dto: ProposeRescheduleDto) {
     const booking = await this.prisma.bookings.findUnique({ where: { id: bookingId } });
     if (!booking) throw new NotFoundException('Booking not found.');
-    if (booking.tutor_id !== tutorId) {
-      throw new ForbiddenException('Only the tutor can propose a reschedule.');
-    }
+    const isParty = booking.student_id === userId || booking.tutor_id === userId;
+    if (!isParty) throw new ForbiddenException('Not your booking.');
     if (!['pending', 'confirmed'].includes(booking.status as string)) {
       throw new BadRequestException('Can only reschedule pending or confirmed bookings.');
     }
@@ -641,7 +606,7 @@ export class BookingService {
 
     const conflict = await this.prisma.bookings.findFirst({
       where: {
-        tutor_id: tutorId,
+        tutor_id: booking.tutor_id,
         id: { not: bookingId },
         status: { in: ['pending', 'confirmed'] },
         start_at: { lt: newEnd },
@@ -649,6 +614,8 @@ export class BookingService {
       },
     });
     if (conflict) throw new BadRequestException('Proposed time conflicts with another booking.');
+
+    const otherPartyId = userId === booking.tutor_id ? booking.student_id : booking.tutor_id;
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.bookings.update({
@@ -658,7 +625,7 @@ export class BookingService {
           reschedule_proposed_start: newStart,
           reschedule_proposed_end: newEnd,
           reschedule_notes: dto.reason,
-          reschedule_requested_by: tutorId,
+          reschedule_requested_by: userId,
           updated_at: new Date(),
         },
         select: {
@@ -671,8 +638,8 @@ export class BookingService {
       }),
       this.prisma.messages.create({
         data: {
-          from_id: tutorId,
-          to_id: booking.student_id,
+          from_id: userId,
+          to_id: otherPartyId,
           booking_id: bookingId,
           content: dto.reason ?? 'I would like to reschedule our session.',
           metadata: {
@@ -684,11 +651,11 @@ export class BookingService {
       }),
       this.prisma.notifications.create({
         data: {
-          profile_id: booking.student_id,
+          profile_id: otherPartyId,
           type: 'RESCHEDULE_PROPOSED',
           payload: {
             booking_id: bookingId,
-            tutor_id: tutorId,
+            requested_by: userId,
             new_start_at: dto.new_start_at,
             new_end_at: dto.new_end_at,
           },
@@ -699,19 +666,22 @@ export class BookingService {
     return updated;
   }
 
-  async acceptReschedule(bookingId: string, studentId: string) {
+  async acceptReschedule(bookingId: string, userId: string) {
     const booking = await this.prisma.bookings.findUnique({ where: { id: bookingId } });
     if (!booking) throw new NotFoundException('Booking not found.');
-    if (booking.student_id !== studentId) {
-      throw new ForbiddenException('Only the student can accept a reschedule.');
-    }
+    const isParty = booking.student_id === userId || booking.tutor_id === userId;
+    if (!isParty) throw new ForbiddenException('Not your booking.');
     if (booking.status !== 'rescheduling') {
       throw new BadRequestException('No pending reschedule proposal on this booking.');
+    }
+    if (booking.reschedule_requested_by === userId) {
+      throw new ForbiddenException('Cannot accept your own reschedule proposal.');
     }
     if (!booking.reschedule_proposed_start || !booking.reschedule_proposed_end) {
       throw new BadRequestException('Reschedule proposal data is incomplete.');
     }
 
+    const proposerId = booking.reschedule_requested_by!;
     const newDuration = Math.round(
       (booking.reschedule_proposed_end.getTime() - booking.reschedule_proposed_start.getTime()) / 60_000,
     );
@@ -734,8 +704,8 @@ export class BookingService {
       }),
       this.prisma.messages.create({
         data: {
-          from_id: studentId,
-          to_id: booking.tutor_id,
+          from_id: userId,
+          to_id: proposerId,
           booking_id: bookingId,
           content: 'I accept the reschedule.',
           metadata: { type: 'RESCHEDULE_ACCEPTED' },
@@ -743,9 +713,9 @@ export class BookingService {
       }),
       this.prisma.notifications.create({
         data: {
-          profile_id: booking.tutor_id,
+          profile_id: proposerId,
           type: 'RESCHEDULE_ACCEPTED',
-          payload: { booking_id: bookingId, student_id: studentId },
+          payload: { booking_id: bookingId, accepted_by: userId },
         },
       }),
     ]);
@@ -753,15 +723,19 @@ export class BookingService {
     return updated;
   }
 
-  async rejectReschedule(bookingId: string, studentId: string) {
+  async rejectReschedule(bookingId: string, userId: string) {
     const booking = await this.prisma.bookings.findUnique({ where: { id: bookingId } });
     if (!booking) throw new NotFoundException('Booking not found.');
-    if (booking.student_id !== studentId) {
-      throw new ForbiddenException('Only the student can reject a reschedule.');
-    }
+    const isParty = booking.student_id === userId || booking.tutor_id === userId;
+    if (!isParty) throw new ForbiddenException('Not your booking.');
     if (booking.status !== 'rescheduling') {
       throw new BadRequestException('No pending reschedule proposal on this booking.');
     }
+    if (booking.reschedule_requested_by === userId) {
+      throw new ForbiddenException('Cannot reject your own reschedule proposal.');
+    }
+
+    const proposerId = booking.reschedule_requested_by!;
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.bookings.update({
@@ -778,8 +752,8 @@ export class BookingService {
       }),
       this.prisma.messages.create({
         data: {
-          from_id: studentId,
-          to_id: booking.tutor_id,
+          from_id: userId,
+          to_id: proposerId,
           booking_id: bookingId,
           content: 'I prefer to keep the original schedule.',
           metadata: { type: 'RESCHEDULE_REJECTED' },
@@ -787,9 +761,9 @@ export class BookingService {
       }),
       this.prisma.notifications.create({
         data: {
-          profile_id: booking.tutor_id,
+          profile_id: proposerId,
           type: 'RESCHEDULE_REJECTED',
-          payload: { booking_id: bookingId, student_id: studentId },
+          payload: { booking_id: bookingId, rejected_by: userId },
         },
       }),
     ]);
@@ -864,14 +838,11 @@ export class BookingService {
       throw new BadRequestException('Resolve the pending price proposal before confirming.');
     }
 
-    // Create Daily.co room before transaction
-    const roomName = await this.daily.createRoom(bookingId, booking.end_at);
-
     const [result] = await this.prisma.$transaction([
       this.prisma.bookings.update({
         where: { id: bookingId },
-        data: { status: 'confirmed', room_name: roomName, updated_at: new Date() },
-        select: { id: true, status: true, room_name: true },
+        data: { status: 'confirmed', updated_at: new Date() },
+        select: { id: true, status: true },
       }),
       this.prisma.notifications.create({
         data: {

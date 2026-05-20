@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Query, Request, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { NotificationsService } from './notifications.service';
 
@@ -7,10 +7,18 @@ import { NotificationsService } from './notifications.service';
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-  // GET /notifications
+  // GET /notifications?page=1&limit=20
   @Get()
-  getMyNotifications(@Request() req: any) {
-    return this.notificationsService.getMyNotifications(req.user.userId || req.user.sub);
+  getMyNotifications(
+    @Request() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.notificationsService.getMyNotifications(
+      req.user.userId || req.user.sub,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   // GET /notifications/unseen-count

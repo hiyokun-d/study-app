@@ -6,12 +6,15 @@ const express = require('express');
 import { AppModule } from './app.module';
 
 const expressApp = express();
-let isReady = false;
+let bootstrapPromise: Promise<typeof expressApp> | null = null;
 
 async function bootstrap() {
-  if (isReady) return expressApp;
+  if (!bootstrapPromise) bootstrapPromise = initApp();
+  return bootstrapPromise;
+}
 
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+async function initApp() {
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), { logger: ['log', 'error', 'warn'] });
 
   app.enableCors();
   app.useGlobalPipes(
@@ -23,7 +26,6 @@ async function bootstrap() {
   );
 
   await app.init();
-  isReady = true;
   return expressApp;
 }
 

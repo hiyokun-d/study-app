@@ -34,13 +34,23 @@ export class BookingController {
   }
 
   @Get('student')
-  getStudentBookings(@Request() req: any, @Query('status') status?: string) {
-    return this.bookingService.getStudentBookings(req.user.userId || req.user.sub, status);
+  getStudentBookings(
+    @Request() req: any,
+    @Query('status') status?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.bookingService.getStudentBookings(req.user.userId || req.user.sub, status, from, to);
   }
 
   @Get('tutor')
-  getTutorBookings(@Request() req: any, @Query('status') status?: string) {
-    return this.bookingService.getTutorBookings(req.user.userId || req.user.sub, status);
+  getTutorBookings(
+    @Request() req: any,
+    @Query('status') status?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.bookingService.getTutorBookings(req.user.userId || req.user.sub, status, from, to);
   }
 
   @Get(':id')
@@ -48,7 +58,7 @@ export class BookingController {
     return this.bookingService.getBookingById(id, req.user.userId || req.user.sub);
   }
 
-  // GET /booking/:id/join — returns Daily.co token + room URL
+  // GET /booking/:id/join — returns Jitsi meeting URL + room password
   @Get(':id/join')
   getJoinInfo(@Param('id') id: string, @Request() req: any) {
     return this.bookingService.getJoinInfo(id, req.user.userId || req.user.sub);

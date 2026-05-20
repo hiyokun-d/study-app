@@ -5,12 +5,18 @@ import { PrismaService } from 'src/prisma.service';
 export class NotificationsService {
   constructor(private prisma: PrismaService) {}
 
-  async getMyNotifications(userId: string) {
-    return this.prisma.notifications.findMany({
-      where: { profile_id: userId },
-      orderBy: { created_at: 'desc' },
-      take: 50,
-    });
+  async getMyNotifications(userId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.prisma.notifications.findMany({
+        where: { profile_id: userId },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.notifications.count({ where: { profile_id: userId } }),
+    ]);
+    return { data, total, page, limit };
   }
 
   async markSeen(userId: string, notifId: string) {

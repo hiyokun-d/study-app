@@ -51,7 +51,12 @@ export class OffersService {
 
     const where: any = {
       is_active: true,
-      profiles: { verification_status: 'APPROVED', is_active: true, is_banned: false },
+      profiles: {
+        verification_status: 'APPROVED',
+        is_active: true,
+        is_banned: false,
+        ...(minRating && { overall_rating: { gte: minRating } }),
+      },
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
@@ -59,11 +64,9 @@ export class OffersService {
         ],
       }),
       ...(maxCoins && { coins_per_hour: { lte: maxCoins } }),
-      ...(minRating && { profiles: { overall_rating: { gte: minRating } } }),
+      ...(subject && { subject_ids: { has: subject } }),
     };
 
-    // subject filter: offer must include subject in subject_ids array
-    // Done post-query since Prisma array contains is field-level
     const [raw, total] = await Promise.all([
       this.prisma.tutor_offers.findMany({
         where,
@@ -85,7 +88,7 @@ export class OffersService {
       this.prisma.tutor_offers.count({ where }),
     ]);
 
-    let offers = raw.map((o) => {
+    const offers = raw.map((o) => {
       const adjustedOffer = applyOfferPenalty(o, o.profiles);
       const adjustedTutor = applyTutorPenalty(o.profiles);
       return {
@@ -94,10 +97,6 @@ export class OffersService {
         coins_per_session: Math.ceil((adjustedOffer.coins_per_hour * o.duration_minutes) / 60),
       };
     });
-
-    if (subject) {
-      offers = offers.filter((o) => o.subject_ids.includes(subject));
-    }
 
     return { data: offers, total, page, limit };
   }
