@@ -49,7 +49,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _startPolling() {
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    _pollingTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
       _load(initial: false);
     });
   }
@@ -70,6 +70,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (result.success) {
       final newMessages = result.messages ?? [];
       
+      // Mark as read if we got new messages
+      if (newMessages.isNotEmpty) {
+        UserApiService.instance.markAllMessagesAsRead(widget.otherId);
+      }
+
       // Update only if there are changes to avoid unnecessary rebuilds and scroll jumps
       if (newMessages.length != _messages.length || 
           (newMessages.isNotEmpty && _messages.isNotEmpty && newMessages.last.id != _messages.last.id)) {

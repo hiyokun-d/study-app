@@ -10,6 +10,7 @@ import '../features/student/screens/course_detail_screen.dart';
 import '../features/student/screens/live_class_screen.dart';
 import '../features/teacher/screens/teacher_dashboard.dart';
 import '../features/student/screens/chat_detail.screen.dart';
+import '../features/student/screens/coin_purchase_screen.dart';
 import '../features/subscription/screens/subscription_plans_screen.dart';
 import '../features/subscription/screens/payment_screen.dart';
 import '../features/subscription/screens/payment_success_screen.dart';
@@ -39,6 +40,7 @@ class AppRoutes {
   static const String subscriptionPlans = '/subscription-plans';
   static const String payment = '/payment';
   static const String paymentSuccess = '/payment-success';
+  static const String coinPurchase = '/coin-purchase';
   static const String UpdateProfile = "/update-profile";
 
   /// Generate route based on settings
@@ -67,6 +69,9 @@ class AppRoutes {
 
       case studentDashboard:
         return _buildRoute(const StudentDashboard(), settings);
+
+      case coinPurchase:
+        return _buildRoute(const CoinPurchaseScreen(), settings);
 
       case courseDetail:
         final args = settings.arguments as Map<String, dynamic>?;

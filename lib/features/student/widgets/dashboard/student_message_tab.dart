@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/services/auth_state.dart';
 import '../../../../core/services/user_api_service.dart';
 import '../../screens/chat_detail.screen.dart';
 
@@ -17,35 +19,70 @@ class _StudentMessageTabState extends State<StudentMessageTab> {
   bool _isLoading = true;
   String? _error;
   final _searchController = TextEditingController();
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(isInitial: true);
     _searchController.addListener(_onSearch);
+    _startPolling();
   }
 
   @override
   void dispose() {
+    _stopPolling();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() { _isLoading = true; _error = null; });
+  void _startPolling() {
+    _pollingTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
+      _load(isInitial: false);
+    });
+  }
+
+  void _stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  Future<void> _load({bool isInitial = false}) async {
+    if (isInitial) {
+      setState(() { _isLoading = true; _error = null; });
+    }
 
     final result = await UserApiService.instance.getChatThreadList();
     if (!mounted) return;
 
-    setState(() {
-      _isLoading = false;
-      if (result.success) {
-        _threads = result.threads ?? [];
-        _filtered = _threads;
-      } else {
-        _error = result.errorMessage;
+    if (result.success) {
+      final newThreads = result.threads ?? [];
+      
+      // Compare to avoid unnecessary UI flickers if nothing changed
+      bool hasChanged = newThreads.length != _threads.length;
+      if (!hasChanged && newThreads.isNotEmpty && _threads.isNotEmpty) {
+        for (int i = 0; i < newThreads.length; i++) {
+          if (newThreads[i].lastMessage.id != _threads[i].lastMessage.id ||
+              newThreads[i].unreadCount != _threads[i].unreadCount) {
+            hasChanged = true;
+            break;
+          }
+        }
       }
-    });
+
+      if (hasChanged || isInitial) {
+        setState(() {
+          _isLoading = false;
+          _threads = newThreads;
+          _onSearch(); // Re-apply search filter to new data
+        });
+      }
+    } else if (isInitial) {
+      setState(() {
+        _isLoading = false;
+        _error = result.errorMessage;
+      });
+    }
   }
 
   void _onSearch() {
@@ -212,7 +249,8 @@ class _ThreadCard extends StatelessWidget {
           ),
         ),
         subtitle: Text(
-          thread.lastMessage.content,
+          (thread.lastMessage.fromId == AuthState.instance.userId ? 'Anda: ' : '') +
+              thread.lastMessage.content,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
