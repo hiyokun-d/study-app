@@ -328,7 +328,7 @@ export class BookingService {
   }
 
   async getStudentBookings(studentId: string, status?: string, from?: string, to?: string) {
-    return this.prisma.bookings.findMany({
+    const bookings = await this.prisma.bookings.findMany({
       where: {
         student_id: studentId,
         ...(status ? { status: status as any } : {}),
@@ -343,6 +343,7 @@ export class BookingService {
         status: true,
         description: true,
         expires_at: true,
+        price: true,
         price_proposed_coins: true,
         price_proposal_expires_at: true,
         reschedule_proposed_start: true,
@@ -352,8 +353,21 @@ export class BookingService {
           select: { id: true, full_name: true, avatar_url: true, username: true, user_status: true },
         },
         tutor_offers: { select: { title: true } },
+        reviews: {
+          where: { reviewer_id: studentId },
+          select: { id: true },
+          take: 1,
+        },
       },
       orderBy: { start_at: 'desc' },
+    });
+
+    return bookings.map((b) => {
+      const { reviews, ...rest } = b;
+      return {
+        ...rest,
+        review: reviews && reviews.length > 0 ? reviews[0] : null,
+      };
     });
   }
 

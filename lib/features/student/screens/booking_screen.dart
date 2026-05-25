@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/services/booking_api_service.dart';
+import '../../../core/services/coin_service.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 
@@ -81,6 +82,9 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() => _isSubmitting = false);
 
     if (result.success) {
+      // Refresh coin balance after successful booking
+      CoinService.instance.getCoinBalance();
+
       showDialog(
         context: context,
         barrierDismissible: false,

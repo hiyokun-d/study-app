@@ -34,6 +34,7 @@ class Booking {
   final int coinAmount;
 
   final BookingStatus status;
+  final bool isRated;
 
   const Booking({
     required this.id,
@@ -50,6 +51,7 @@ class Booking {
     required this.price,
     this.coinAmount = 0,
     required this.status,
+    this.isRated = false,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
@@ -82,10 +84,17 @@ class Booking {
       endTime:          endAt,
       dayOfWeek:        dayOfWeek,
       defaultStartTime: defaultStartTime,
-      price:            double.tryParse(json['price']?.toString() ?? '0') ?? 0,
-      coinAmount:       int.tryParse((json['coins_cost'] ?? json['coin_amount'])?.toString() ?? '0') ?? 0,
+      price:            _parsePrice(json['price']),
+      coinAmount:       int.tryParse((json['coins_cost'] ?? json['coin_amount'] ?? '0').toString()) ?? 0,
       status:           _parseStatus(json['status']?.toString()),
+      isRated:          json['review'] != null,
     );
+  }
+
+  static double _parsePrice(dynamic val) {
+    if (val == null) return 0;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString()) ?? 0;
   }
 
   static BookingStatus _parseStatus(String? value) {

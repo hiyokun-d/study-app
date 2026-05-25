@@ -41,6 +41,24 @@ class CoinHistoryResult {
       CoinHistoryResult._(success: false, errorMessage: message);
 }
 
+class CoinOrderResult {
+  final bool success;
+  final Map<String, dynamic>? order;
+  final String? errorMessage;
+
+  const CoinOrderResult._({
+    required this.success,
+    this.order,
+    this.errorMessage,
+  });
+
+  factory CoinOrderResult.success(Map<String, dynamic> data) =>
+      CoinOrderResult._(success: true, order: data);
+
+  factory CoinOrderResult.error(String message) =>
+      CoinOrderResult._(success: false, errorMessage: message);
+}
+
 // ─── CoinService ──────────────────────────────────────────────────────────────
 
 /// Handles all coin-related API calls.
@@ -51,6 +69,52 @@ class CoinHistoryResult {
 class CoinService {
   CoinService._();
   static final CoinService instance = CoinService._();
+
+  // ── GET /coins/packages ────────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getCoinPackages() async {
+    try {
+      final response = await ApiClient.instance.get('/coins/packages');
+      if (response.statusCode == 200) {
+        return (jsonDecode(response.body) as List).cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    // Fallback if server is down or returns error
+    return [
+      {'coins': 50, 'fiat': 50000, 'label': '50 coins — Rp 50.000'},
+      {'coins': 120, 'fiat': 110000, 'label': '120 coins — Rp 110.000'},
+      {'coins': 260, 'fiat': 225000, 'label': '260 coins — Rp 225.000'},
+      {'coins': 550, 'fiat': 450000, 'label': '550 coins — Rp 450.000'},
+    ];
+  }
+
+  // ── POST /coins/purchase ───────────────────────────────────────────────────
+
+  Future<CoinOrderResult> createPaymentOrder(int coinsAmount) async {
+    if (!AuthState.instance.isLoggedIn) {
+      return CoinOrderResult.error('Not authenticated.');
+    }
+
+    try {
+      final response = await ApiClient.instance.post(
+        '/coins/purchase',
+        {'coins_amount': coinsAmount},
+        requiresAuth: true,
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return CoinOrderResult.success(data as Map<String, dynamic>);
+      }
+
+      return CoinOrderResult.error(data['message']?.toString() ?? 'Failed to create order');
+    } on StateError catch (e) {
+      return CoinOrderResult.error(e.message);
+    } catch (e) {
+      return CoinOrderResult.error(ApiClient.instance.friendlyError(e));
+    }
+  }
 
   // ── GET /coins/balance ─────────────────────────────────────────────────────
 

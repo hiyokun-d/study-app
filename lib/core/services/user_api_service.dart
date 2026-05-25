@@ -6,7 +6,7 @@ import '../../data/dummy_data.dart';
 import '../../models/booking_model.dart';
 import '../../models/tutor_profile.dart';
 import 'auth_state.dart';
-
+import '../../models/chat_models.dart';
 // Re-export chat models so existing import paths continue to work.
 export '../../models/chat_models.dart';
 
@@ -255,6 +255,24 @@ class UserApiService {
       return ChatMessageListResult.error(e.message);
     } catch (e) {
       return ChatMessageListResult.error(ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ─── Mark Thread as Read ──────────────────────────────────────────────────
+
+  Future<SimpleResult> markAllMessagesAsRead(String otherId) async {
+    try {
+      final response = await ApiClient.instance.patch(
+        '/messages/conversation/$otherId/read-all',
+        {},
+        requiresAuth: true,
+      );
+      return SimpleResult(
+        success: response.statusCode == 200,
+        message: jsonDecode(response.body)['message']?.toString(),
+      );
+    } catch (_) {
+      return SimpleResult(success: false);
     }
   }
 

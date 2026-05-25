@@ -370,16 +370,25 @@ class _BookingCard extends StatelessWidget {
               ),
               const Spacer(),
               if (booking.status == BookingStatus.completed)
-                TextButton(
-                  onPressed: () => _showReviewDialog(context),
+                TextButton.icon(
+                  onPressed: booking.isRated ? null : () => _showReviewDialog(context, booking),
                   style: TextButton.styleFrom(
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    backgroundColor: booking.isRated 
+                        ? AppColors.success.withOpacity(0.1)
+                        : AppColors.primary.withOpacity(0.1),
+                    foregroundColor: booking.isRated ? AppColors.success : AppColors.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text('Rate', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  icon: booking.isRated 
+                      ? const Icon(Icons.check_circle_rounded, size: 14) 
+                      : const SizedBox.shrink(),
+                  label: Text(
+                    booking.isRated ? 'Rated' : 'Rate', 
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
                 )
               else if (booking.status == BookingStatus.confirmed)
                 ElevatedButton(
@@ -409,14 +418,14 @@ class _BookingCard extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.toll_rounded, size: 14, color: AppColors.primary),
+                    const Icon(Icons.toll_rounded, size: 14, color: AppColors.warning),
                     const SizedBox(width: 4),
                     Text(
-                      '${_fmtPrice(booking.price)} coins',
+                      '${_fmtPrice(booking.coinAmount.toDouble())} coins',
                       style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primary),
+                          color: AppColors.warning),
                     ),
                   ],
                 ),
@@ -427,7 +436,7 @@ class _BookingCard extends StatelessWidget {
     );
   }
 
-  void _showReviewDialog(BuildContext context) {
+  void _showReviewDialog(BuildContext context, Booking booking) {
     int rating = 5;
     final commentController = TextEditingController();
 
@@ -472,6 +481,9 @@ class _BookingCard extends StatelessWidget {
                 );
                 if (context.mounted) {
                   Navigator.pop(context);
+                  if (success) {
+                    onRefresh();
+                  }
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(success ? 'Review submitted!' : 'Failed to submit review.'),
