@@ -2,9 +2,33 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/services/auth_state.dart';
+import '../../../../core/services/coin_service.dart';
+import '../../../../core/widgets/common/api_error_snackbar.dart';
 
-class StudentProfileTab extends StatelessWidget {
+class StudentProfileTab extends StatefulWidget {
   const StudentProfileTab({super.key});
+
+  @override
+  State<StudentProfileTab> createState() => _StudentProfileTabState();
+}
+
+class _StudentProfileTabState extends State<StudentProfileTab> {
+  @override
+  void initState() {
+    super.initState();
+    _refreshBalance();
+  }
+
+  Future<void> _refreshBalance() async {
+    final result = await CoinService.instance.getCoinBalance();
+    if (!mounted) return;
+    if (!result.success) {
+      ApiErrorSnackbar.show(
+          context, result.errorMessage ?? 'Could not refresh coin balance');
+    } else {
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,20 +39,35 @@ class StudentProfileTab extends StatelessWidget {
         : '?';
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSizes.lg),
-        child: Column(
-          children: [
+      child: RefreshIndicator(
+        onRefresh: _refreshBalance,
+        color: AppColors.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSizes.lg),
+          child: Column(
+            children: [
             const SizedBox(height: AppSizes.md),
-            CircleAvatar(
-              radius: 44,
-              backgroundColor: AppColors.primary.withOpacity(0.15),
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
+            // Profile Picture with Outline
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.warning.withOpacity(0.3),
+                  width: 3,
+                ),
+              ),
+              padding: const EdgeInsets.all(4),
+              child: CircleAvatar(
+                radius: 44,
+                backgroundColor: AppColors.warning.withOpacity(0.15),
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: AppColors.warning,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
@@ -47,6 +86,31 @@ class StudentProfileTab extends StatelessWidget {
               style: const TextStyle(
                   fontSize: 13, color: AppColors.textSecondary),
             ),
+            const SizedBox(height: AppSizes.md),
+            // Coin Balance Display
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                border: Border.all(color: AppColors.warning.withOpacity(0.2)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.toll_rounded, color: AppColors.warning, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${AuthState.instance.coinsBalance} Coins',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.warning,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: AppSizes.xl),
             _ProfileMenuItem(
               icon: Icons.person_outline_rounded,
@@ -55,15 +119,10 @@ class StudentProfileTab extends StatelessWidget {
                   Navigator.of(context).pushNamed('/update-profile'),
             ),
             _ProfileMenuItem(
-              icon: Icons.bookmark_border_rounded,
-              label: 'Saved Tutors',
-              onTap: () {},
-            ),
-            _ProfileMenuItem(
-              icon: Icons.card_membership_rounded,
-              label: 'Subscription',
+              icon: Icons.toll_rounded,
+              label: 'Top Up Coin',
               onTap: () => Navigator.of(context)
-                  .pushNamed('/subscription-plans'),
+                  .pushNamed('/coin-purchase'),
             ),
             _ProfileMenuItem(
               icon: Icons.help_outline_rounded,
@@ -81,8 +140,9 @@ class StudentProfileTab extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _ProfileMenuItem extends StatelessWidget {

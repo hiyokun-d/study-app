@@ -59,10 +59,10 @@ class AvatarWidget extends StatelessWidget {
   String get _initials {
     if (name == null || name!.isEmpty) return '?';
     final parts = name!.trim().split(' ');
-    if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
+    if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
-    return name!.isNotEmpty ? name![0].toUpperCase() : '?';
+    return name![0].toUpperCase();
   }
 
   @override
@@ -74,7 +74,7 @@ class AvatarWidget extends StatelessWidget {
         backgroundColor ?? colorScheme.primaryContainer;
     final effectiveTextColor = textColor ?? colorScheme.onPrimaryContainer;
     final effectiveBorderColor =
-        borderColor ?? colorScheme.primary.withValues(alpha: 0.3);
+        borderColor ?? colorScheme.primary.withOpacity(0.3);
 
     Widget avatar = Container(
       width: _avatarSize,
@@ -97,7 +97,7 @@ class AvatarWidget extends StatelessWidget {
             : null,
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.1),
+            color: colorScheme.shadow.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
