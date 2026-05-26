@@ -80,7 +80,7 @@ class TextInput extends StatelessWidget {
 
   double get _fontSize => size == InputSize.small ? 14 : 16;
 
-  
+  double get _effectiveRadius => borderRadius ?? 12.0;
 
   @override
   Widget build(BuildContext context) {

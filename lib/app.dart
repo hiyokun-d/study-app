@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/core/theme/app_theme.dart';
-import 'package:myapp/routes/app_routes.dart';
+import 'package:lern/core/theme/app_theme.dart';
+import 'package:lern/routes/app_routes.dart';
 
 /// Main application widget with theme support
 class StudyApp extends StatefulWidget {
