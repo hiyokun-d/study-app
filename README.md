@@ -4,7 +4,7 @@
 
 # StudyApp
 
-> this app totally made with ❤️(dan orang orang terganteng dan tersigma, tergila, tergakwaras apalah gw ketik apaan awokawokaowkaowk gw bakalan kasih ini ke AI aja dah daripada ngawur aowkaokoawkoakw)
+> Built with ❤️ by the StudyApp team.
 
 ### Peer-to-Peer Tutoring Marketplace
 
@@ -61,9 +61,10 @@ See [`_server/README.md`](./_server/README.md) for detailed API documentation.
                                │ HTTP / JSON (REST)
                                ▼
 ┌──────────────────────────────────────────────────────────────┐
-│              NestJS Backend  (_server/)                      │
-│   AuthModule · UserModule · PrismaModule                     │
-│   🔲 BookingModule · 🔲 ChatModule · 🔲 SubscriptionModule   │
+│              NestJS Backend  (_server/)  — Modular Monolith  │
+│   AuthModule · UserModule · BookingModule · MessagesModule   │
+│   CoinsModule · ReviewsModule · NotificationsModule          │
+│   OffersModule · DailyModule · AdminModule · InternalModule  │
 └──────────────────────────────┬───────────────────────────────┘
                                │ SQL via Prisma ORM
                                ▼
@@ -225,16 +226,21 @@ study-app/
 
 See [`_server/README.md`](./_server/README.md) for full details.
 
-| Module                                    | Status         |
-| ----------------------------------------- | -------------- |
-| Auth (signup, login, Google OAuth)        | ✅ Complete    |
-| User profiles (CRUD, tutor search/filter) | ✅ Complete    |
-| Unit tests — 62 tests, 5 suites           | ✅ All passing |
-| Booking module                            | 🔲 Not started |
-| Chat/messaging module                     | 🔲 Not started |
-| Subscription module                       | 🔲 Not started |
-| Review module                             | 🔲 Not started |
-| Notification module                       | 🔲 Not started |
+| Module                                          | Status      |
+| ----------------------------------------------- | ----------- |
+| Auth (signup, login, Google OAuth, JWT)         | ✅ Complete |
+| User profiles (CRUD, tutor search/filter)       | ✅ Complete |
+| Booking (create, confirm, reschedule, expire)   | ✅ Complete |
+| Messages (per-booking chat)                     | ✅ Complete |
+| Reviews (post-session rating)                   | ✅ Complete |
+| Tutor offers (create, manage, pricing)          | ✅ Complete |
+| Coins (balance, transactions, price proposals)  | ✅ Complete |
+| Notifications                                   | ✅ Complete |
+| Admin module (ban, verify tutors, refunds)      | ✅ Complete |
+| Payment (Midtrans QRIS integration)             | ✅ Complete |
+| Withdrawal requests (tutor cashout)             | ✅ Complete |
+| Daily jobs (auto-expire bookings, etc.)         | ✅ Complete |
+| Unit tests — 62 tests, 5 suites                 | ✅ Passing  |
 
 ---
 
@@ -254,16 +260,18 @@ See [`_server/README.md`](./_server/README.md) for full details.
 
 ### Backend — NestJS (TypeScript)
 
-| Tool               | Purpose                          |
-| ------------------ | -------------------------------- |
-| **NestJS**         | Modular Node.js framework        |
-| **TypeScript**     | Language                         |
-| **Prisma ORM**     | Type-safe DB access + migrations |
-| **PostgreSQL**     | Database (hosted on Supabase)    |
-| **argon2**         | Password hashing                 |
-| **JWT**            | Stateless authentication         |
-| **Passport**       | JWT strategy + guards            |
-| **Jest + ts-jest** | Unit testing                     |
+| Tool                    | Purpose                              |
+| ----------------------- | ------------------------------------ |
+| **NestJS v11**          | Modular Node.js framework            |
+| **TypeScript**          | Language                             |
+| **Prisma ORM v7**       | Type-safe DB access + migrations     |
+| **PostgreSQL**          | Database (hosted on Supabase)        |
+| **argon2**              | Password hashing                     |
+| **JWT + Passport**      | Stateless auth + strategy guards     |
+| **Helmet**              | HTTP security headers                |
+| **@nestjs/throttler**   | Rate limiting                        |
+| **Midtrans**            | Payment gateway (QRIS, Indonesia)    |
+| **Jest + ts-jest**      | Unit testing                         |
 
 ---
 

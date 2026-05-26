@@ -14,7 +14,7 @@ class AppConfig {
 
   /// `10.0.2.2` is the Android-emulator alias for `localhost`.
   /// Replace with your real server URL for physical devices / production.
-  static const String apiUrl = 'http://10.0.2.2:3000';
+  static const String apiUrl = 'http://165.245.178.148:3000';
 
   // ── Network settings ───────────────────────────────────────────────────────
 
