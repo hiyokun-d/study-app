@@ -77,6 +77,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -96,9 +102,6 @@ jobs:
 
       - name: Build APK (compile check)
         run: flutter build apk --debug --no-pub
-        env:
-          # Needed so Gradle doesn't fail on CI
-          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
 
   # ─── Summary ────────────────────────────────────────────────────────────────
   summary:
