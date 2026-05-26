@@ -21,18 +21,18 @@
 // and debugging the application's core UI building blocks in isolation.
 
 import 'package:flutter/material.dart';
-import 'package:myapp/core/widgets/buttons/outline_button.dart';
-import 'package:myapp/core/widgets/buttons/primary_button.dart';
-import 'package:myapp/core/widgets/buttons/social_auth_button.dart';
-import 'package:myapp/core/widgets/common/app_logo_widget.dart';
-import 'package:myapp/core/widgets/common/avatar_widget.dart';
-import 'package:myapp/core/widgets/common/empty_state.dart';
-import 'package:myapp/core/widgets/common/loading_widget.dart';
-import 'package:myapp/core/widgets/cards/role_selection_card.dart';
-import 'package:myapp/core/widgets/inputs/password_text_field.dart';
-import 'package:myapp/core/widgets/inputs/search_input.dart';
-import 'package:myapp/core/widgets/inputs/text_input.dart';
-import 'package:myapp/core/widgets/feedback/custom_checkbox.dart';
+import 'package:lern/core/widgets/buttons/outline_button.dart';
+import 'package:lern/core/widgets/buttons/primary_button.dart';
+import 'package:lern/core/widgets/buttons/social_auth_button.dart';
+import 'package:lern/core/widgets/common/app_logo_widget.dart';
+import 'package:lern/core/widgets/common/avatar_widget.dart';
+import 'package:lern/core/widgets/common/empty_state.dart';
+import 'package:lern/core/widgets/common/loading_widget.dart';
+import 'package:lern/core/widgets/cards/role_selection_card.dart';
+import 'package:lern/core/widgets/inputs/password_text_field.dart';
+import 'package:lern/core/widgets/inputs/search_input.dart';
+import 'package:lern/core/widgets/inputs/text_input.dart';
+import 'package:lern/core/widgets/feedback/custom_checkbox.dart';
 
 class TestWidget extends StatefulWidget {
   const TestWidget({super.key});
