@@ -10,8 +10,15 @@ class AuthState extends ChangeNotifier {
   String? accessToken;
   String? userId;
   String? email;
-  String? role;
-  
+
+  String? _role;
+  String? get role => _role;
+  set role(String? val) {
+    _role = val;
+    _persist();
+    notifyListeners();
+  }
+
   String? _username;
   String? get username => _username;
   set username(String? val) {
@@ -58,7 +65,7 @@ class AuthState extends ChangeNotifier {
     final user = data['user'] as Map<String, dynamic>? ?? {};
     userId = user['id']?.toString();
     email = user['email']?.toString();
-    role = user['role']?.toString();
+    _role = user['role']?.toString();
     _username = user['username']?.toString();
     _fullName = user['full_name']?.toString()
         ?? user['fullName']?.toString()
@@ -87,7 +94,7 @@ class AuthState extends ChangeNotifier {
     accessToken = prefs.getString(_kToken);
     userId = prefs.getString(_kUserId);
     email = prefs.getString(_kEmail);
-    role = prefs.getString(_kRole);
+    _role = prefs.getString(_kRole);
     _username = prefs.getString(_kUsername);
     _fullName = prefs.getString(_kFullName);
     _coinsBalance = prefs.getInt(_kCoinsBalance) ?? 0;
@@ -103,7 +110,7 @@ class AuthState extends ChangeNotifier {
     accessToken = null;
     userId = null;
     email = null;
-    role = null;
+    _role = null;
     _username = null;
     _fullName = null;
     _coinsBalance = 0;

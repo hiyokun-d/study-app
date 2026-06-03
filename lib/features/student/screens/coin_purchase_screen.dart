@@ -108,8 +108,8 @@ class _CoinPurchaseScreenState extends State<CoinPurchaseScreen> {
   Widget _buildPackageCard(int index) {
     final pkg = _packages![index];
     final isSelected = _selectedPackageIndex == index;
-    final coins = pkg['coins'] as int;
-    final fiat = pkg['fiat'] as int;
+    final coins = (pkg['coins'] as num?)?.toInt() ?? 0;
+    final fiat = (pkg['fiat'] as num?)?.toInt() ?? 0;
     final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     return GestureDetector(

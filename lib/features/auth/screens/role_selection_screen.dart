@@ -45,7 +45,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
       );
       return;
     }
-    Navigator.of(context).pushNamed('/register');
+    Navigator.of(context).pushReplacementNamed(
+      '/update-profile',
+      arguments: {'role': _selectedRole!.toUpperCase()},
+    );
   }
 
   @override

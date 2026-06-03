@@ -45,19 +45,23 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   Future<void> _submitCompleteIdentity() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final selectedRole = args?['role'] as String?;
+
     setState(() => _isLoading = true);
 
     String? uploadedUrl;
     if (_selectedImage != null) {
       // Logic for uploading to S3/Cloudinary would go here.
       // For now, we use a placeholder or keep current URL.
-      uploadedUrl = AuthState.instance.avatarUrl; 
+      uploadedUrl = AuthState.instance.avatarUrl;
     }
 
     if (AppConfig.useMock) {
       AuthState.instance
         ..fullName = fullNameController.text.trim()
         ..username = usernameController.text.trim();
+      if (selectedRole != null) AuthState.instance.role = selectedRole;
       await Future.delayed(const Duration(milliseconds: 800));
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -67,6 +71,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         username: usernameController.text.trim(),
         bio: bioController.text.trim(),
         avatarUrl: uploadedUrl,
+        role: selectedRole,
       );
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -86,6 +91,12 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         AuthState.instance.fullName = userData['full_name']?.toString();
         AuthState.instance.username = userData['username']?.toString();
         AuthState.instance.avatarUrl = userData['avatar_url']?.toString();
+        final returnedRole = userData['role']?.toString();
+        if (returnedRole != null) {
+          AuthState.instance.role = returnedRole;
+        } else if (selectedRole != null) {
+          AuthState.instance.role = selectedRole;
+        }
       }
     }
 
@@ -139,7 +150,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
       extendBodyBehindAppBar: true,

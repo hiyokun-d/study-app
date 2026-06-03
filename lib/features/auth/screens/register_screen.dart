@@ -62,7 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.of(context).pushReplacementNamed('/update-profile');
+      Navigator.of(context).pushReplacementNamed('/role-selection');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

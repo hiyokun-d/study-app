@@ -48,7 +48,7 @@ class TutorBrowseService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        return GetTutorsResult.success((data as List).cast<Map<String, dynamic>>());
+        return GetTutorsResult.success((data as List?)?.cast<Map<String, dynamic>>() ?? []);
       }
 
       return GetTutorsResult.error('Failed to load tutors.');
@@ -80,7 +80,7 @@ class TutorBrowseService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        return GetTutorsResult.success((data as List).cast<Map<String, dynamic>>());
+        return GetTutorsResult.success((data as List?)?.cast<Map<String, dynamic>>() ?? []);
       }
 
       return GetTutorsResult.error('Failed to search tutors.');

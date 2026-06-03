@@ -76,7 +76,7 @@ class CoinService {
     try {
       final response = await ApiClient.instance.get('/coins/packages');
       if (response.statusCode == 200) {
-        return (jsonDecode(response.body) as List).cast<Map<String, dynamic>>();
+        return (jsonDecode(response.body) as List?)?.cast<Map<String, dynamic>>() ?? [];
       }
     } catch (_) {}
     // Fallback if server is down or returns error

@@ -161,7 +161,7 @@ class BookingApiService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        final list = (data as List).cast<Map<String, dynamic>>();
+        final list = (data as List?)?.cast<Map<String, dynamic>>() ?? [];
         return GetMyBookingsResult.success(list);
       }
 
@@ -186,7 +186,7 @@ class BookingApiService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        return AvailabilityResult.success((data as List).cast<Map<String, dynamic>>());
+        return AvailabilityResult.success((data as List?)?.cast<Map<String, dynamic>>() ?? []);
       }
 
       return AvailabilityResult.error(data['message']?.toString() ?? 'Error');

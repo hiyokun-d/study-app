@@ -87,7 +87,7 @@ class StudentProfileService {
       );
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        final list = (data['data'] as List).cast<Map<String, dynamic>>();
+        final list = (data['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
         return NotificationListResult.success(list);
       }
       return NotificationListResult.error(
