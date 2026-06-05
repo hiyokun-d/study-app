@@ -15,7 +15,11 @@ async function bootstrap() {
 }
 
 async function initApp() {
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), { logger: ['log', 'error', 'warn'] });
+  const app = await NestFactory.create(
+    AppModule,
+    new ExpressAdapter(expressApp),
+    { logger: ['log', 'error', 'warn'] },
+  );
 
   app.use(helmet());
 
@@ -38,6 +42,17 @@ async function initApp() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+
+  // Reject requests not coming through the Vercel proxy
+  app.use((req, res, next) => {
+    if (req.headers['x-proxy-secret'] !== process.env.PROXY_SECRET) {
+      return res.status(403).end();
+    }
+    next();
+  });
+
+  // Bind to localhost only — not reachable from outside even without firewall
+  await app.listen(3000, '127.0.0.1');
 
   await app.init();
   return expressApp;
