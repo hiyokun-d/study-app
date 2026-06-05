@@ -52,7 +52,7 @@ async function initApp() {
   });
 
   // Bind to localhost only — not reachable from outside even without firewall
-  await app.listen(3000, '127.0.0.1');
+  await app.listen(3000);
 
   await app.init();
   return expressApp;
