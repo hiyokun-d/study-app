@@ -44,12 +44,12 @@ async function initApp() {
   );
 
   // Reject requests not coming through the Vercel proxy
-  app.use((req, res, next) => {
-    if (req.headers['x-proxy-secret'] !== process.env.PROXY_SECRET) {
-      return res.status(403).end();
-    }
-    next();
-  });
+  // app.use((req, res, next) => {
+  //   if (req.headers['x-proxy-secret'] !== process.env.PROXY_SECRET) {
+  //     return res.status(403).end();
+  //   }
+  //   next();
+  // });
 
   // Bind to localhost only — not reachable from outside even without firewall
   await app.listen(3000);
