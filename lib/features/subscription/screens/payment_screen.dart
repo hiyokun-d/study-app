@@ -18,7 +18,6 @@ class PaymentScreen extends StatelessWidget {
     final orderId = args['order_id'] ?? 'Unknown';
     final coins = args['coins_amount'] ?? 0;
     final idr = args['idr_amount'] ?? 0;
-    final qrUrl = args['qr_code_url'];
     final qrString = args['qr_string'];
     
     final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
@@ -39,7 +38,7 @@ class PaymentScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSizes.lg),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.05),
+                color: AppColors.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
