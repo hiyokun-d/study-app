@@ -34,8 +34,7 @@ class StudentProfileService {
 
   /// GET /auth/me  🔒 JWT required
   ///
-  /// Note: the server does NOT return coins_balance here.
-  /// Call CoinService.getCoinBalance() separately to refresh balance.
+  /// Syncs full_name, avatar_url, username, and coins_balance into [AuthState].
   Future<GetMyProfileResult> getMyProfile() async {
     if (!AuthState.instance.isLoggedIn) {
       return GetMyProfileResult.error('You must be logged in.');
@@ -55,6 +54,16 @@ class StudentProfileService {
         }
         final avatar = profile['avatar_url']?.toString();
         if (avatar != null) AuthState.instance.avatarUrl = avatar;
+
+        final username = profile['username']?.toString();
+        if (username != null && username.isNotEmpty) {
+          AuthState.instance.username = username;
+        }
+
+        final rawCoins = profile['coins_balance'] ?? profile['coin_balance'];
+        if (rawCoins != null) {
+          AuthState.instance.coinsBalance = (rawCoins as num).toInt();
+        }
 
         return GetMyProfileResult.success(profile);
       }

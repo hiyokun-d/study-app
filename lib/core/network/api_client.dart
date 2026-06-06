@@ -84,6 +84,20 @@ class ApiClient {
     );
   }
 
+  Future<http.Response> delete(
+    String path, {
+    bool requiresAuth = false,
+  }) async {
+    _checkTls();
+    _rateLimit(path);
+    final uri = Uri.parse('${AppConfig.apiUrl}$path');
+    return _withRetry(
+      () => http
+          .delete(uri, headers: _headers(requiresAuth: requiresAuth))
+          .timeout(AppConfig.requestTimeout),
+    );
+  }
+
   /// Translates a caught exception into a user-friendly message.
   String friendlyError(Object e) {
     if (e is SocketException) return 'No internet connection. Please check your network.';

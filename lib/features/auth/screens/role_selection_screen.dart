@@ -45,9 +45,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
       );
       return;
     }
+    // Map UI label to server enum: 'teacher' → 'TUTOR', 'student' → 'STUDENT'
+    final serverRole = _selectedRole == 'teacher' ? 'TUTOR' : 'STUDENT';
     Navigator.of(context).pushReplacementNamed(
       '/update-profile',
-      arguments: {'role': _selectedRole!.toUpperCase()},
+      arguments: {'role': serverRole, 'fromRegistration': true},
     );
   }
 

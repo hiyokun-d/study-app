@@ -42,11 +42,15 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     }
   }
 
+  Map<String, dynamic>? get _args =>
+      ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+  bool get _fromRegistration => _args?['fromRegistration'] == true;
+
   Future<void> _submitCompleteIdentity() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final selectedRole = args?['role'] as String?;
+    final selectedRole = _args?['role'] as String?;
 
     setState(() => _isLoading = true);
 
@@ -108,15 +112,18 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       ),
     );
     
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    } else {
-      final role = AuthState.instance.role?.toLowerCase();
-      if (role == 'tutor' || role == 'teacher') {
+    if (_fromRegistration) {
+      // Registration flow — always go to dashboard, never pop
+      final role = AuthState.instance.role?.toUpperCase();
+      if (role == 'TUTOR') {
         Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
       } else {
         Navigator.of(context).pushReplacementNamed('/student-dashboard');
       }
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      Navigator.of(context).pushReplacementNamed('/student-dashboard');
     }
   }
 
@@ -148,10 +155,13 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        automaticallyImplyLeading: !_fromRegistration,
+        leading: _fromRegistration
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
       ),
       extendBodyBehindAppBar: true,
       body: Column(
@@ -179,7 +189,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Edit Profile',
+                        _fromRegistration ? 'Complete Your Profile' : 'Edit Profile',
                         textAlign: TextAlign.center,
                         style: textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.w700,
@@ -280,7 +290,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                       const Divider(color: AppColors.divider),
                       const SizedBox(height: AppSizes.xl),
                       PrimaryButton(
-                        text: 'Save Changes',
+                        text: _fromRegistration ? 'Get Started' : 'Save Changes',
                         onPressed: _submitCompleteIdentity,
                         isLoading: _isLoading,
                         radius: AppSizes.radiusFull,

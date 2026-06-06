@@ -344,11 +344,21 @@ class UserApiService {
     }
   }
 
-  Future<SimpleResult> proposeReschedule(String bookingId, DateTime newStart) async {
+  Future<SimpleResult> proposeReschedule(
+    String bookingId,
+    DateTime newStart,
+    DateTime newEnd, {
+    String? reason,
+  }) async {
     try {
+      final body = <String, dynamic>{
+        'new_start_at': newStart.toIso8601String(),
+        'new_end_at': newEnd.toIso8601String(),
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      };
       final response = await ApiClient.instance.patch(
         '/booking/$bookingId/propose-reschedule',
-        {'newStartAt': newStart.toIso8601String()},
+        body,
         requiresAuth: true,
       );
       return SimpleResult(
@@ -359,6 +369,177 @@ class UserApiService {
       return SimpleResult(success: false, message: e.message);
     } catch (e) {
       return SimpleResult(success: false, message: ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ─── Student reschedule responses ─────────────────────────────────────────
+
+  Future<SimpleResult> acceptReschedule(String bookingId) async {
+    try {
+      final response = await ApiClient.instance.patch(
+        '/booking/$bookingId/accept-reschedule',
+        {},
+        requiresAuth: true,
+      );
+      return SimpleResult(
+        success: response.statusCode == 200,
+        message: jsonDecode(response.body)['message']?.toString(),
+      );
+    } on StateError catch (e) {
+      return SimpleResult(success: false, message: e.message);
+    } catch (e) {
+      return SimpleResult(success: false, message: ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  Future<SimpleResult> rejectReschedule(String bookingId) async {
+    try {
+      final response = await ApiClient.instance.patch(
+        '/booking/$bookingId/reject-reschedule',
+        {},
+        requiresAuth: true,
+      );
+      return SimpleResult(
+        success: response.statusCode == 200,
+        message: jsonDecode(response.body)['message']?.toString(),
+      );
+    } on StateError catch (e) {
+      return SimpleResult(success: false, message: e.message);
+    } catch (e) {
+      return SimpleResult(success: false, message: ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ─── Student price responses ───────────────────────────────────────────────
+
+  Future<SimpleResult> acceptPrice(String bookingId) async {
+    try {
+      final response = await ApiClient.instance.patch(
+        '/booking/$bookingId/accept-price',
+        {},
+        requiresAuth: true,
+      );
+      return SimpleResult(
+        success: response.statusCode == 200,
+        message: jsonDecode(response.body)['message']?.toString(),
+      );
+    } on StateError catch (e) {
+      return SimpleResult(success: false, message: e.message);
+    } catch (e) {
+      return SimpleResult(success: false, message: ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  Future<SimpleResult> rejectPrice(String bookingId) async {
+    try {
+      final response = await ApiClient.instance.patch(
+        '/booking/$bookingId/reject-price',
+        {},
+        requiresAuth: true,
+      );
+      return SimpleResult(
+        success: response.statusCode == 200,
+        message: jsonDecode(response.body)['message']?.toString(),
+      );
+    } on StateError catch (e) {
+      return SimpleResult(success: false, message: e.message);
+    } catch (e) {
+      return SimpleResult(success: false, message: ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ─── User presence ─────────────────────────────────────────────────────────
+
+  /// [status]: 'ONLINE' | 'OFFLINE' | 'BUSY'
+  Future<SimpleResult> updateStatus(String status) async {
+    if (!AuthState.instance.isLoggedIn) {
+      return SimpleResult(success: false, message: 'Not authenticated.');
+    }
+    try {
+      final response = await ApiClient.instance.patch(
+        '/user/status',
+        {'status': status},
+        requiresAuth: true,
+      );
+      return SimpleResult(
+        success: response.statusCode == 200,
+        message: jsonDecode(response.body)['message']?.toString(),
+      );
+    } on StateError catch (e) {
+      return SimpleResult(success: false, message: e.message);
+    } catch (e) {
+      return SimpleResult(success: false, message: ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ─── Reviews ───────────────────────────────────────────────────────────────
+
+  Future<ReviewListResult> getTutorReviews(String tutorId) async {
+    try {
+      final response = await ApiClient.instance.get('/reviews/tutor/$tutorId');
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List;
+        return ReviewListResult.success(list.cast<Map<String, dynamic>>());
+      }
+      return ReviewListResult.error('Failed to load reviews (${response.statusCode})');
+    } on StateError catch (e) {
+      return ReviewListResult.error(e.message);
+    } catch (e) {
+      return ReviewListResult.error(ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ─── Public offers ─────────────────────────────────────────────────────────
+
+  Future<OfferListResult> getPublicOffers() async {
+    try {
+      final response = await ApiClient.instance.get('/offers');
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List;
+        return OfferListResult.success(list.cast<Map<String, dynamic>>());
+      }
+      return OfferListResult.error('Failed to load offers (${response.statusCode})');
+    } on StateError catch (e) {
+      return OfferListResult.error(e.message);
+    } catch (e) {
+      return OfferListResult.error(ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  Future<OfferDetailResult> getOfferById(String offerId) async {
+    try {
+      final response = await ApiClient.instance.get('/offers/$offerId');
+      if (response.statusCode == 200) {
+        return OfferDetailResult.success(jsonDecode(response.body) as Map<String, dynamic>);
+      }
+      return OfferDetailResult.error('Failed to load offer (${response.statusCode})');
+    } on StateError catch (e) {
+      return OfferDetailResult.error(e.message);
+    } catch (e) {
+      return OfferDetailResult.error(ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ─── All students ──────────────────────────────────────────────────────────
+
+  Future<StudentListResult> getAllStudents() async {
+    if (!AuthState.instance.isLoggedIn) {
+      return StudentListResult.error('Not authenticated.');
+    }
+    try {
+      final response = await ApiClient.instance.get(
+        '/user/student',
+        requiresAuth: true,
+      );
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List;
+        return StudentListResult.success(list.cast<Map<String, dynamic>>());
+      }
+      return StudentListResult.error('Failed to load students (${response.statusCode})');
+    } on StateError catch (e) {
+      return StudentListResult.error(e.message);
+    } catch (e) {
+      return StudentListResult.error(ApiClient.instance.friendlyError(e));
     }
   }
 
@@ -494,4 +675,60 @@ class SendMessageResult {
 
   factory SendMessageResult.error(String message) =>
       SendMessageResult._(success: false, errorMessage: message);
+}
+
+class ReviewListResult {
+  final bool success;
+  final List<Map<String, dynamic>>? reviews;
+  final String? errorMessage;
+
+  const ReviewListResult._({required this.success, this.reviews, this.errorMessage});
+
+  factory ReviewListResult.success(List<Map<String, dynamic>> reviews) =>
+      ReviewListResult._(success: true, reviews: reviews);
+
+  factory ReviewListResult.error(String message) =>
+      ReviewListResult._(success: false, errorMessage: message);
+}
+
+class OfferListResult {
+  final bool success;
+  final List<Map<String, dynamic>>? offers;
+  final String? errorMessage;
+
+  const OfferListResult._({required this.success, this.offers, this.errorMessage});
+
+  factory OfferListResult.success(List<Map<String, dynamic>> offers) =>
+      OfferListResult._(success: true, offers: offers);
+
+  factory OfferListResult.error(String message) =>
+      OfferListResult._(success: false, errorMessage: message);
+}
+
+class OfferDetailResult {
+  final bool success;
+  final Map<String, dynamic>? offer;
+  final String? errorMessage;
+
+  const OfferDetailResult._({required this.success, this.offer, this.errorMessage});
+
+  factory OfferDetailResult.success(Map<String, dynamic> offer) =>
+      OfferDetailResult._(success: true, offer: offer);
+
+  factory OfferDetailResult.error(String message) =>
+      OfferDetailResult._(success: false, errorMessage: message);
+}
+
+class StudentListResult {
+  final bool success;
+  final List<Map<String, dynamic>>? students;
+  final String? errorMessage;
+
+  const StudentListResult._({required this.success, this.students, this.errorMessage});
+
+  factory StudentListResult.success(List<Map<String, dynamic>> students) =>
+      StudentListResult._(success: true, students: students);
+
+  factory StudentListResult.error(String message) =>
+      StudentListResult._(success: false, errorMessage: message);
 }

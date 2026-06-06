@@ -215,6 +215,144 @@ class BookingApiService {
       return false;
     }
   }
+
+  // ── GET /booking/tutor ─────────────────────────────────────────────────────
+
+  Future<GetMyBookingsResult> getTutorBookings({String? status}) async {
+    if (!AuthState.instance.isLoggedIn) {
+      return GetMyBookingsResult.error('You must be logged in.');
+    }
+
+    final queryParams = <String, String>{};
+    if (status != null) queryParams['status'] = status;
+
+    try {
+      final response = await ApiClient.instance.get(
+        '/booking/tutor',
+        queryParams: queryParams.isNotEmpty ? queryParams : null,
+        requiresAuth: true,
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final list = (data as List?)?.cast<Map<String, dynamic>>() ?? [];
+        return GetMyBookingsResult.success(list);
+      }
+
+      final message = data['message'] ?? data['error'] ?? 'Failed to load bookings.';
+      return GetMyBookingsResult.error(message.toString());
+    } on StateError catch (e) {
+      return GetMyBookingsResult.error(e.message);
+    } catch (e) {
+      return GetMyBookingsResult.error(ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ── PATCH /booking/:id/confirm ─────────────────────────────────────────────
+
+  Future<UpdateBookingStatusResult> confirmBooking(String bookingId) async {
+    if (!AuthState.instance.isLoggedIn) {
+      return UpdateBookingStatusResult.error('Not authenticated.');
+    }
+    try {
+      final response = await ApiClient.instance.patch(
+        '/booking/$bookingId/confirm',
+        {},
+        requiresAuth: true,
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return UpdateBookingStatusResult.success(
+            data['booking'] as Map<String, dynamic>? ?? data);
+      }
+      return UpdateBookingStatusResult.error(
+          data['message']?.toString() ?? 'Failed (${response.statusCode})');
+    } on StateError catch (e) {
+      return UpdateBookingStatusResult.error(e.message);
+    } catch (e) {
+      return UpdateBookingStatusResult.error(ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ── PATCH /booking/:id/decline ─────────────────────────────────────────────
+
+  Future<UpdateBookingStatusResult> declineBooking(String bookingId) async {
+    if (!AuthState.instance.isLoggedIn) {
+      return UpdateBookingStatusResult.error('Not authenticated.');
+    }
+    try {
+      final response = await ApiClient.instance.patch(
+        '/booking/$bookingId/decline',
+        {},
+        requiresAuth: true,
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return UpdateBookingStatusResult.success(
+            data['booking'] as Map<String, dynamic>? ?? data);
+      }
+      return UpdateBookingStatusResult.error(
+          data['message']?.toString() ?? 'Failed (${response.statusCode})');
+    } on StateError catch (e) {
+      return UpdateBookingStatusResult.error(e.message);
+    } catch (e) {
+      return UpdateBookingStatusResult.error(ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ── PATCH /booking/:id/complete ────────────────────────────────────────────
+
+  Future<UpdateBookingStatusResult> completeBooking(String bookingId) async {
+    if (!AuthState.instance.isLoggedIn) {
+      return UpdateBookingStatusResult.error('Not authenticated.');
+    }
+    try {
+      final response = await ApiClient.instance.patch(
+        '/booking/$bookingId/complete',
+        {},
+        requiresAuth: true,
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return UpdateBookingStatusResult.success(
+            data['booking'] as Map<String, dynamic>? ?? data);
+      }
+      return UpdateBookingStatusResult.error(
+          data['message']?.toString() ?? 'Failed (${response.statusCode})');
+    } on StateError catch (e) {
+      return UpdateBookingStatusResult.error(e.message);
+    } catch (e) {
+      return UpdateBookingStatusResult.error(ApiClient.instance.friendlyError(e));
+    }
+  }
+
+  // ── PATCH /booking/:id/propose-price ──────────────────────────────────────
+
+  Future<UpdateBookingStatusResult> proposePriceOnBooking(
+      String bookingId, int proposedPriceCoins) async {
+    if (!AuthState.instance.isLoggedIn) {
+      return UpdateBookingStatusResult.error('Not authenticated.');
+    }
+    try {
+      final response = await ApiClient.instance.patch(
+        '/booking/$bookingId/propose-price',
+        {'proposed_price_coins': proposedPriceCoins},
+        requiresAuth: true,
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return UpdateBookingStatusResult.success(
+            data['booking'] as Map<String, dynamic>? ?? data);
+      }
+      return UpdateBookingStatusResult.error(
+          data['message']?.toString() ?? 'Failed (${response.statusCode})');
+    } on StateError catch (e) {
+      return UpdateBookingStatusResult.error(e.message);
+    } catch (e) {
+      return UpdateBookingStatusResult.error(ApiClient.instance.friendlyError(e));
+    }
+  }
 }
 
 class AvailabilityResult {

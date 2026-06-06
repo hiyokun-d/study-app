@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/auth_state.dart';
 
 class TeacherProfileTab extends StatelessWidget {
   const TeacherProfileTab({super.key});
@@ -82,7 +84,8 @@ class TeacherProfileTab extends StatelessWidget {
                   labelColor: Colors.redAccent,
                   showDivider: false,
                   onTap: () {
-                    // TODO: Handle logout logic
+                    AuthService.instance.logout();
+                    Navigator.of(context).pushReplacementNamed('/login');
                   },
                 ),
               ],
@@ -122,7 +125,10 @@ class _TeacherProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Removed the separate background decoration so it blends seamlessly into the screen gradient
+    final name = AuthState.instance.displayName;
+    final avatarUrl = AuthState.instance.avatarUrl;
+    final coinsBalance = AuthState.instance.coinsBalance;
+
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -141,13 +147,24 @@ class _TeacherProfileHeader extends StatelessWidget {
                   BoxShadow(color: Colors.black26, blurRadius: 16, offset: Offset(0, 6)),
                 ],
               ),
-              child: const Icon(Icons.person_rounded, size: 52, color: Colors.white),
+              child: avatarUrl != null
+                  ? ClipOval(
+                      child: Image.network(
+                        avatarUrl,
+                        fit: BoxFit.cover,
+                        width: 96,
+                        height: 96,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.person_rounded, size: 52, color: Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.person_rounded, size: 52, color: Colors.white),
             ),
             const SizedBox(height: 14),
             // Profile Name
-            const Text(
-              'Dr. Amba Rusdi, S.Kom., M.SI.',
-              style: TextStyle(
+            Text(
+              name,
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -156,36 +173,36 @@ class _TeacherProfileHeader extends StatelessWidget {
             const SizedBox(height: 4),
             // Profile Role / Subtitle
             const Text(
-              'Teacher',
+              'Tutor',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.white70,
               ),
             ),
             const SizedBox(height: 16),
-            // Earnings Badge
+            // Coin Balance Badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.account_balance_wallet_rounded, color: Color(0xFFFFD700), size: 22),
-                  SizedBox(width: 8),
+                  const Icon(Icons.toll_rounded, color: Color(0xFFFFD700), size: 22),
+                  const SizedBox(width: 8),
                   Text(
-                    'Rp 5,432,000',
-                    style: TextStyle(
+                    '$coinsBalance coins',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(width: 6),
-                  Text(
-                    'total earnings',
+                  const SizedBox(width: 6),
+                  const Text(
+                    'balance',
                     style: TextStyle(fontSize: 12, color: Colors.white70),
                   ),
                 ],

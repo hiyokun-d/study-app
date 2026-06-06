@@ -1,30 +1,87 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/tutor_api_service.dart';
 
-class TeacherCoursesTab extends StatelessWidget {
+class TeacherCoursesTab extends StatefulWidget {
   const TeacherCoursesTab({super.key});
 
-  // Hardcoded dummy data to replace DummyData.courses for instant compilation
-  static const _courses = [
-    {'title': 'Advanced Mathematics', 'students': 142, 'rating': 4.8},
-    {'title': 'Physics 101: Mechanics', 'students': 89, 'rating': 4.5},
-    {'title': 'Introduction to Computer Science', 'students': 256, 'rating': 4.9},
-    {'title': 'Biology: Cell Structure', 'students': 64, 'rating': 4.2},
-    {'title': 'World History: 20th Century', 'students': 112, 'rating': 4.7},
-  ];
+  @override
+  State<TeacherCoursesTab> createState() => _TeacherCoursesTabState();
+}
+
+class _TeacherCoursesTabState extends State<TeacherCoursesTab> {
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _offers = [];
+  List<Map<String, dynamic>> _filtered = [];
+  final _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearch);
+    _loadOffers();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadOffers() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final result = await TutorApiService.instance.getMyOffers();
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (result.success) {
+        _offers = result.offers ?? [];
+        _filtered = _offers;
+      } else {
+        _error = result.errorMessage;
+      }
+    });
+  }
+
+  void _onSearch() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filtered = query.isEmpty
+          ? _offers
+          : _offers
+              .where((o) =>
+                  (o['title']?.toString() ?? '').toLowerCase().contains(query))
+              .toList();
+    });
+  }
+
+  Future<void> _deleteOffer(String offerId) async {
+    final result = await TutorApiService.instance.deleteOffer(offerId);
+    if (!mounted) return;
+    if (result.success) {
+      _loadOffers();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message ?? 'Failed to delete offer')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // The unified 3-color background gradient
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF3B82F6), // Vivid blue
-              Color(0xFF93C5FD), // Light blue
-              Color(0xFFFFFFFF), // White
+              Color(0xFF3B82F6),
+              Color(0xFF93C5FD),
+              Color(0xFFFFFFFF),
             ],
             stops: [0.0, 0.4, 1.0],
           ),
@@ -35,11 +92,10 @@ class TeacherCoursesTab extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
-              // Header Title
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24.0),
                 child: Text(
-                  'My Courses',
+                  'My Offers',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -48,26 +104,47 @@ class TeacherCoursesTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              
-              // Custom Search Bar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: _buildSearchBar(),
               ),
               const SizedBox(height: 24),
-              
-              // Course List
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(
-                    left: 24.0, 
-                    right: 24.0, 
-                    bottom: 40.0, 
+              if (_loading)
+                const Expanded(child: Center(child: CircularProgressIndicator()))
+              else if (_error != null)
+                Expanded(
+                  child: Center(
+                    child: Text(_error!,
+                        style: const TextStyle(color: Colors.red)),
                   ),
-                  itemCount: _courses.length,
-                  itemBuilder: (context, index) => _buildCourseItem(_courses[index]),
+                )
+              else if (_filtered.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      _offers.isEmpty
+                          ? 'No offers yet. Create your first offer!'
+                          : 'No results.',
+                      style: const TextStyle(color: Color(0xFF64748B)),
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _loadOffers,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(
+                        left: 24.0,
+                        right: 24.0,
+                        bottom: 40.0,
+                      ),
+                      itemCount: _filtered.length,
+                      itemBuilder: (context, index) =>
+                          _buildOfferItem(_filtered[index]),
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -90,8 +167,9 @@ class TeacherCoursesTab extends StatelessWidget {
         ],
       ),
       child: TextField(
+        controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Search courses...',
+          hintText: 'Search offers...',
           hintStyle: TextStyle(
             color: Colors.grey.shade400,
             fontSize: 15,
@@ -108,7 +186,13 @@ class TeacherCoursesTab extends StatelessWidget {
     );
   }
 
-  Widget _buildCourseItem(Map<String, dynamic> course) {
+  Widget _buildOfferItem(Map<String, dynamic> offer) {
+    final title = offer['title']?.toString() ?? 'Untitled';
+    final coinsPerHour = offer['coins_per_hour']?.toString() ?? '—';
+    final durationRaw = offer['duration_minutes'];
+    final duration = durationRaw != null ? '${durationRaw}min' : null;
+    final offerId = offer['id']?.toString() ?? '';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -125,32 +209,30 @@ class TeacherCoursesTab extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Icon Box
           Container(
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: const Color(0xFFE0E7FF), // Very light indigo background
+              color: const Color(0xFFE0E7FF),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
-              Icons.menu_book_rounded, 
-              color: Color(0xFF4F46E5), // Indigo icon
+              Icons.menu_book_rounded,
+              color: Color(0xFF4F46E5),
               size: 26,
             ),
           ),
           const SizedBox(width: 16),
-          // Course Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  course['title'],
+                  title,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E293B), // Dark slate
+                    color: Color(0xFF1E293B),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -158,43 +240,44 @@ class TeacherCoursesTab extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.people_alt_rounded, size: 14, color: Colors.grey.shade500),
+                    const Icon(Icons.toll_rounded,
+                        size: 14, color: Color(0xFF6366F1)),
                     const SizedBox(width: 4),
                     Text(
-                      '${course['students']} students',
+                      '$coinsPerHour coins/hr',
                       style: TextStyle(
-                        fontSize: 12, 
-                        color: Colors.grey.shade500,
-                      ),
+                          fontSize: 12, color: Colors.grey.shade500),
                     ),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF59E0B)), // Amber star
-                    const SizedBox(width: 4),
-                    Text(
-                      course['rating'].toString(),
-                      style: TextStyle(
-                        fontSize: 12, 
-                        fontWeight: FontWeight.w600, 
-                        color: Colors.grey.shade700,
+                    if (duration != null) ...[
+                      const SizedBox(width: 12),
+                      Icon(Icons.timer_outlined,
+                          size: 14, color: Colors.grey.shade500),
+                      const SizedBox(width: 4),
+                      Text(
+                        duration,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade500),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ],
             ),
           ),
-          // Popup Menu
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade400),
             onSelected: (value) {
-              // Action handlers go here later
+              if (value == 'delete' && offerId.isNotEmpty) {
+                _deleteOffer(offerId);
+              }
             },
             itemBuilder: (context) => const [
               PopupMenuItem(value: 'edit', child: Text('Edit')),
               PopupMenuItem(value: 'analytics', child: Text('Analytics')),
               PopupMenuItem(
-                value: 'delete', 
-                child: Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                value: 'delete',
+                child: Text('Delete',
+                    style: TextStyle(color: Colors.redAccent)),
               ),
             ],
           ),
