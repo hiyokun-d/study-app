@@ -1,11 +1,19 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { PrismaService } from 'src/prisma.service';
 
 const AVATAR_BUCKET = 'user pict';
 const FILE_BUCKET = 'user file';
 
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const AVATAR_MAX_BYTES = 6 * 1024 * 1024; // 6 MB — mirrors Supabase bucket policy
+const FILE_MAX_BYTES = 10 * 1024 * 1024;  // 10 MB for chat attachments
+
 const ALLOWED_FILE_TYPES = [
-  ...ALLOWED_IMAGE_TYPES,
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+  'image/heic',
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -14,6 +22,8 @@ const ALLOWED_FILE_TYPES = [
 
 @Injectable()
 export class StorageService {
+  constructor(private prisma: PrismaService) {}
+
   private get supabaseUrl(): string {
     return process.env.SUPABASE_URL ?? '';
   }
@@ -55,13 +65,32 @@ export class StorageService {
   }
 
   // Generate a signed upload URL for the user's profile picture.
-  // Path in bucket: {userId}  (one file per user, overwritten on re-upload)
-  async getAvatarUploadUrl(userId: string): Promise<{ signed_url: string; public_url: string }> {
+  // Validates MIME (must be image/*) and size (≤6 MB) before issuing URL.
+  // Auto-saves avatar_url in profiles so the client only needs to PUT the file.
+  async getAvatarUploadUrl(
+    userId: string,
+    mimeType: string,
+    fileSize: number,
+  ): Promise<{ signed_url: string; public_url: string }> {
     this.assertConfigured();
 
+    if (!mimeType.startsWith('image/')) {
+      throw new BadRequestException('Avatar must be an image file (image/*).');
+    }
+    if (fileSize > AVATAR_MAX_BYTES) {
+      throw new BadRequestException('Avatar exceeds 6 MB limit.');
+    }
+
+    // Path is deterministic: one slot per user, overwrites on re-upload
     const data = await this.createSignedUrl(AVATAR_BUCKET, userId);
     const encodedBucket = encodeURIComponent(AVATAR_BUCKET);
     const public_url = `${this.supabaseUrl}/storage/v1/object/public/${encodedBucket}/${userId}`;
+
+    // Auto-save so client doesn't need a separate PATCH /user/update/profile call
+    await this.prisma.profiles.update({
+      where: { id: userId },
+      data: { avatar_url: public_url },
+    });
 
     return {
       signed_url: `${this.supabaseUrl}${data.signedURL}`,
@@ -75,6 +104,7 @@ export class StorageService {
     userId: string,
     filename: string,
     mimeType: string,
+    fileSize: number,
   ): Promise<{ signed_url: string; public_url: string; message_type: string }> {
     this.assertConfigured();
 
@@ -82,6 +112,9 @@ export class StorageService {
       throw new BadRequestException(
         `File type "${mimeType}" not allowed. Allowed: images, PDF, Word, plain text.`,
       );
+    }
+    if (fileSize > FILE_MAX_BYTES) {
+      throw new BadRequestException('File exceeds 10 MB limit.');
     }
 
     // Sanitize filename — strip path separators and limit length
@@ -92,7 +125,7 @@ export class StorageService {
     const data = await this.createSignedUrl(FILE_BUCKET, objectPath);
     const public_url = `${this.supabaseUrl}/storage/v1/object/public/${encodedBucket}/${objectPath}`;
 
-    const message_type = ALLOWED_IMAGE_TYPES.includes(mimeType) ? 'IMAGE' : 'FILE';
+    const message_type = mimeType.startsWith('image/') ? 'IMAGE' : 'FILE';
 
     return {
       signed_url: `${this.supabaseUrl}${data.signedURL}`,
