@@ -14,7 +14,7 @@ class AppConfig {
 
   /// `10.0.2.2` is the Android-emulator alias for `localhost`.
   /// Replace with your real server URL for physical devices / production.
-  static const String apiUrl = 'https://lern.hiyokun-d.dev/api';
+  static const String apiUrl = 'http://202.10.37.213:3000';
 
   // ── Network settings ───────────────────────────────────────────────────────
 
@@ -24,7 +24,7 @@ class AppConfig {
 
   /// When true, ApiClient logs a warning if apiUrl is plain HTTP on a
   /// non-loopback address (reminder to use HTTPS in production).
-  static const bool useTls = true;
+  static const bool useTls = false;
 
   // ── Currency & coins ───────────────────────────────────────────────────────
 
