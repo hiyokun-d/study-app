@@ -40,12 +40,12 @@ export class StorageService {
     }
   }
 
-  private async createSignedUrl(
+  private async createSignedUploadUrl(
     bucket: string,
     objectPath: string,
-  ): Promise<{ signedURL: string }> {
+  ): Promise<string> {
     const encodedBucket = encodeURIComponent(bucket);
-    const apiUrl = `${this.supabaseUrl}/storage/v1/object/sign/${encodedBucket}/${objectPath}`;
+    const apiUrl = `${this.supabaseUrl}/storage/v1/object/upload/sign/${encodedBucket}/${objectPath}`;
 
     const res = await fetch(apiUrl, {
       method: 'POST',
@@ -53,7 +53,6 @@ export class StorageService {
         Authorization: `Bearer ${this.serviceKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ expiresIn: 3600 }),
     });
 
     if (!res.ok) {
@@ -61,7 +60,8 @@ export class StorageService {
       throw new InternalServerErrorException(`Failed to generate upload URL: ${err}`);
     }
 
-    return res.json() as Promise<{ signedURL: string }>;
+    const json = (await res.json()) as { url: string };
+    return `${this.supabaseUrl}${json.url}`;
   }
 
   // Generate a signed upload URL for the user's profile picture.
@@ -82,7 +82,7 @@ export class StorageService {
     }
 
     // Path is deterministic: one slot per user, overwrites on re-upload
-    const data = await this.createSignedUrl(AVATAR_BUCKET, userId);
+    const signed_url = await this.createSignedUploadUrl(AVATAR_BUCKET, userId);
     const encodedBucket = encodeURIComponent(AVATAR_BUCKET);
     const public_url = `${this.supabaseUrl}/storage/v1/object/public/${encodedBucket}/${userId}`;
 
@@ -92,10 +92,7 @@ export class StorageService {
       data: { avatar_url: public_url },
     });
 
-    return {
-      signed_url: `${this.supabaseUrl}${data.signedURL}`,
-      public_url,
-    };
+    return { signed_url, public_url };
   }
 
   // Generate a signed upload URL for a chat file attachment.
@@ -122,15 +119,10 @@ export class StorageService {
     const objectPath = `${userId}/${Date.now()}-${safe}`;
     const encodedBucket = encodeURIComponent(FILE_BUCKET);
 
-    const data = await this.createSignedUrl(FILE_BUCKET, objectPath);
+    const signed_url = await this.createSignedUploadUrl(FILE_BUCKET, objectPath);
     const public_url = `${this.supabaseUrl}/storage/v1/object/public/${encodedBucket}/${objectPath}`;
-
     const message_type = mimeType.startsWith('image/') ? 'IMAGE' : 'FILE';
 
-    return {
-      signed_url: `${this.supabaseUrl}${data.signedURL}`,
-      public_url,
-      message_type,
-    };
+    return { signed_url, public_url, message_type };
   }
 }
