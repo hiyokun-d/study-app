@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -46,7 +47,7 @@ export class MessagesController {
   // GET /messages/conversation/:userId?cursor=&limit= — paginated history with one user
   @Get('conversation/:userId')
   getConversation(
-    @Param('userId') partnerId: string,
+    @Param('userId', ParseUUIDPipe) partnerId: string,
     @Request() req: any,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
@@ -61,7 +62,7 @@ export class MessagesController {
 
   // PATCH /messages/conversation/:userId/read-all — mark all unread from that user as read
   @Patch('conversation/:userId/read-all')
-  markAllRead(@Param('userId') partnerId: string, @Request() req: any) {
+  markAllRead(@Param('userId', ParseUUIDPipe) partnerId: string, @Request() req: any) {
     return this.messagesService.markAllRead(
       req.user.userId || req.user.sub,
       partnerId,
@@ -70,14 +71,14 @@ export class MessagesController {
 
   // PATCH /messages/:id/read — mark single message read
   @Patch(':id/read')
-  markRead(@Param('id') id: string, @Request() req: any) {
+  markRead(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     return this.messagesService.markRead(req.user.userId || req.user.sub, id);
   }
 
   // POST /messages/:id/report — report a message for admin review
   @Post(':id/report')
   reportMessage(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Request() req: any,
     @Body() dto: ReportMessageDto,
   ) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Request, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -16,7 +16,7 @@ export class ReviewsController {
 
   // GET /reviews/tutor/:id — public, list reviews for a tutor
   @Get('tutor/:id')
-  getTutorReviews(@Param('id') id: string) {
+  getTutorReviews(@Param('id', ParseUUIDPipe) id: string) {
     return this.reviewsService.getTutorReviews(id);
   }
 }

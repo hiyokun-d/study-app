@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -56,14 +57,14 @@ export class AdminController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Get('users/:id')
-  getUserById(@Param('id') id: string) {
+  getUserById(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.getUserById(id);
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Patch('users/:id/ban')
-  banUser(@Param('id') id: string, @Request() req: any, @Body() dto: BanUserDto) {
+  banUser(@Param('id', ParseUUIDPipe) id: string, @Request() req: any, @Body() dto: BanUserDto) {
     const adminId = req.user.userId || req.user.sub;
     return this.adminService.banUser(adminId, id, dto);
   }
@@ -71,14 +72,14 @@ export class AdminController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Patch('users/:id/unban')
-  unbanUser(@Param('id') id: string) {
+  unbanUser(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.unbanUser(id);
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Patch('users/:id/deactivate')
-  deactivateUser(@Param('id') id: string, @Request() req: any) {
+  deactivateUser(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     const adminId = req.user.userId || req.user.sub;
     return this.adminService.deactivateUser(adminId, id);
   }
@@ -86,14 +87,14 @@ export class AdminController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Patch('users/:id/activate')
-  activateUser(@Param('id') id: string) {
+  activateUser(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.activateUser(id);
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Post('users/:id/warn')
-  warnUser(@Param('id') id: string, @Request() req: any, @Body() dto: WarnUserDto) {
+  warnUser(@Param('id', ParseUUIDPipe) id: string, @Request() req: any, @Body() dto: WarnUserDto) {
     const adminId = req.user.userId || req.user.sub;
     return this.adminService.warnUser(adminId, id, dto);
   }
@@ -102,7 +103,7 @@ export class AdminController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Post('users/:id/grant-coins')
-  grantCoins(@Param('id') id: string, @Request() req: any, @Body() dto: GrantCoinsDto) {
+  grantCoins(@Param('id', ParseUUIDPipe) id: string, @Request() req: any, @Body() dto: GrantCoinsDto) {
     const adminId = req.user.userId || req.user.sub;
     return this.adminService.grantCoins(adminId, id, dto);
   }
@@ -117,7 +118,7 @@ export class AdminController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Get('tutors/:id')
-  getTutorDetail(@Param('id') id: string) {
+  getTutorDetail(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.getTutorDetail(id);
   }
 
@@ -125,7 +126,7 @@ export class AdminController {
   @Roles('ADMIN')
   @Patch('tutors/:id/verify')
   verifyTutor(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Request() req: any,
     @Body() dto: VerifyTutorDto,
   ) {
@@ -149,15 +150,14 @@ export class AdminController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Get('bookings/:id')
-  getBookingDetail(@Param('id') id: string) {
+  getBookingDetail(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.getBookingDetail(id);
   }
 
-  // GET /admin/bookings/:id/join — admin joins as owner/moderator
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Get('bookings/:id/join')
-  getBookingJoinInfo(@Param('id') id: string, @Request() req: any) {
+  getBookingJoinInfo(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     const adminId = req.user.userId || req.user.sub;
     return this.adminService.getBookingJoinInfo(id, adminId);
   }
@@ -204,7 +204,7 @@ export class AdminController {
   @Roles('ADMIN')
   @Patch('withdrawals/:id')
   processWithdrawal(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Request() req: any,
     @Body() dto: ProcessWithdrawalDto,
   ) {
@@ -212,7 +212,6 @@ export class AdminController {
     return this.adminService.processWithdrawal(adminId, id, dto);
   }
 
-  // GET /admin/reports/messages — list all reported messages
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Get('reports/messages')
@@ -226,19 +225,17 @@ export class AdminController {
     );
   }
 
-  // PATCH /admin/reports/messages/:id/dismiss — clear the report flag
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Patch('reports/messages/:id/dismiss')
-  dismissReport(@Param('id') id: string) {
+  dismissReport(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.dismissReport(id);
   }
 
-  // DELETE /admin/reports/messages/:id — delete the offending message
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   @Post('reports/messages/:id/delete')
-  deleteReportedMessage(@Param('id') id: string) {
+  deleteReportedMessage(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.deleteReportedMessage(id);
   }
 }

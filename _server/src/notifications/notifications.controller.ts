@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Query, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Patch, Query, Request, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { NotificationsService } from './notifications.service';
 
@@ -35,7 +35,7 @@ export class NotificationsController {
 
   // PATCH /notifications/:id/seen
   @Patch(':id/seen')
-  markSeen(@Request() req: any, @Param('id') id: string) {
+  markSeen(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.notificationsService.markSeen(req.user.userId || req.user.sub, id);
   }
 }

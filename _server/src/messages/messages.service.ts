@@ -8,7 +8,6 @@ import { Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { SendMessageDto } from './dto/send-message.dto';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const MSG_SELECT = {
   id: true,
@@ -134,8 +133,6 @@ export class MessagesService {
     cursor?: string,
     limit = 30,
   ) {
-    if (!UUID_RE.test(partnerId)) throw new BadRequestException('Invalid partner ID.');
-
     const partner = await this.prisma.profiles.findUnique({
       where: { id: partnerId },
       select: {
@@ -185,8 +182,6 @@ export class MessagesService {
   }
 
   async markAllRead(userId: string, partnerId: string) {
-    if (!UUID_RE.test(partnerId)) throw new BadRequestException('Invalid partner ID.');
-
     const { count } = await this.prisma.messages.updateMany({
       where: { from_id: partnerId, to_id: userId, is_read: false },
       data: { is_read: true, read_at: new Date() },

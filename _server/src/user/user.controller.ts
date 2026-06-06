@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -51,12 +52,12 @@ export class UserController {
   }
 
   @Get('tutor/:id')
-  getTutorDetail(@Param('id') id: string) {
+  getTutorDetail(@Param('id', ParseUUIDPipe) id: string) {
     return this.userService.getTutorDetailProfile(id);
   }
 
   @Get('tutor/:id/availability')
-  getTutorAvailability(@Param('id') id: string) {
+  getTutorAvailability(@Param('id', ParseUUIDPipe) id: string) {
     return this.userService.getTutorAvailability(id);
   }
 
@@ -70,7 +71,7 @@ export class UserController {
 
   @UseGuards(AuthGuard('jwt'))
   @Delete('tutor/availability/:id')
-  deleteAvailability(@Request() req: any, @Param('id') id: string) {
+  deleteAvailability(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.userService.deleteAvailability(req.user.userId || req.user.sub, id);
   }
 
@@ -92,7 +93,7 @@ export class UserController {
   @Patch('tutor/offer/:id')
   updateOffer(
     @Request() req: any,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTutorOfferDto,
   ) {
     return this.userService.updateOffer(
@@ -104,7 +105,7 @@ export class UserController {
 
   @UseGuards(AuthGuard('jwt'))
   @Delete('tutor/offer/:id')
-  deleteOffer(@Request() req: any, @Param('id') id: string) {
+  deleteOffer(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.userService.deleteOffer(req.user.userId || req.user.sub, id);
   }
 

@@ -1,7 +1,6 @@
-import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Request, ServiceUnavailableException, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CoinsService } from './coins.service';
-import { CreatePaymentOrderDto } from './dto/create-payment-order.dto';
 import { WithdrawalRequestDto } from './dto/withdrawal-request.dto';
 
 @Controller('coins')
@@ -25,28 +24,13 @@ export class CoinsController {
     return this.coinsService.getHistory(req.user.userId || req.user.sub);
   }
 
+  // Payment gateway not integrated yet — re-enable when Midtrans is wired up
   @UseGuards(AuthGuard('jwt'))
   @Post('purchase')
-  createOrder(@Request() req: any, @Body() dto: CreatePaymentOrderDto) {
-    return this.coinsService.createPaymentOrder(req.user.userId || req.user.sub, dto);
+  createOrder() {
+    throw new ServiceUnavailableException('Payment gateway not yet available.');
   }
 
-  // Midtrans sends notification here after payment
-  @Post('webhook/midtrans')
-  midtransWebhook(@Body() body: any) {
-    return this.coinsService.handleMidtransWebhook(body);
-  }
-
-  // Dev-only: manually fulfill an order (remove before prod)
-  @Post('dev/fulfill/:orderId')
-  devFulfill(@Param('orderId') orderId: string) {
-    if (process.env.MIDTRANS_SERVER_KEY) {
-      return { message: 'Dev fulfill disabled in production.' };
-    }
-    return this.coinsService.fulfillOrder(orderId);
-  }
-
-  // Tutor requests to cash out coins → IDR
   @UseGuards(AuthGuard('jwt'))
   @Post('withdraw')
   requestWithdrawal(@Request() req: any, @Body() dto: WithdrawalRequestDto) {

@@ -2,37 +2,14 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
-import { createHash } from 'crypto';
 import { PrismaService } from 'src/prisma.service';
-import { COIN_PACKAGES, COIN_TO_IDR, CreatePaymentOrderDto } from './dto/create-payment-order.dto';
+import { COIN_PACKAGES, COIN_TO_IDR } from './dto/create-payment-order.dto';
 import { WithdrawalRequestDto } from './dto/withdrawal-request.dto';
 
 @Injectable()
 export class CoinsService {
   constructor(private prisma: PrismaService) {}
-
-  private get midtransBaseUrl(): string {
-    return process.env.MIDTRANS_IS_PRODUCTION === 'true'
-      ? 'https://api.midtrans.com'
-      : 'https://api.sandbox.midtrans.com';
-  }
-
-  private get midtransAuthHeader(): string {
-    const key = process.env.MIDTRANS_SERVER_KEY ?? '';
-    return 'Basic ' + Buffer.from(key + ':').toString('base64');
-  }
-
-  private computeMidtransSignature(
-    orderId: string,
-    statusCode: string,
-    grossAmount: string,
-  ): string {
-    const serverKey = process.env.MIDTRANS_SERVER_KEY ?? '';
-    const raw = orderId + statusCode + grossAmount + serverKey;
-    return createHash('sha512').update(raw).digest('hex');
-  }
 
   getPackages() {
     return COIN_PACKAGES.map((p) => ({
@@ -57,128 +34,6 @@ export class CoinsService {
       orderBy: { created_at: 'desc' },
       take: 50,
     });
-  }
-
-  async createPaymentOrder(userId: string, dto: CreatePaymentOrderDto) {
-    const pkg = COIN_PACKAGES.find((p) => p.coins === dto.coins_amount);
-    if (!pkg) {
-      throw new BadRequestException(
-        `Invalid coins_amount. Valid: ${COIN_PACKAGES.map((p) => p.coins).join(', ')}`,
-      );
-    }
-
-    const order = await this.prisma.payment_orders.create({
-      data: {
-        profile_id: userId,
-        coins_amount: pkg.coins,
-        fiat_amount: pkg.fiat,
-        currency: 'IDR',
-        provider: 'midtrans',
-        status: 'PENDING',
-      },
-    });
-
-    // Skip Midtrans if no server key configured (dev/test mode)
-    if (!process.env.MIDTRANS_SERVER_KEY) {
-      return {
-        order_id: order.id,
-        coins_amount: pkg.coins,
-        idr_amount: pkg.fiat,
-        currency: 'IDR',
-        qr_string: null,
-        qr_code_url: null,
-        expires_in_minutes: 30,
-        status: 'PENDING',
-        dev_note: 'MIDTRANS_SERVER_KEY not set. Use POST /coins/dev/fulfill/:order_id to complete.',
-      };
-    }
-
-    // Create QRIS via Midtrans Core API
-    const midtransRes = await fetch(`${this.midtransBaseUrl}/v2/charge`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: this.midtransAuthHeader,
-      },
-      body: JSON.stringify({
-        payment_type: 'qris',
-        transaction_details: {
-          order_id: order.id,
-          gross_amount: pkg.fiat,
-        },
-        custom_expiry: {
-          expiry_duration: 30,
-          unit: 'minute',
-        },
-      }),
-    });
-
-    const midtransData = await midtransRes.json() as any;
-
-    if (!midtransRes.ok || !['200', '201'].includes(midtransData.status_code)) {
-      await this.prisma.payment_orders.update({
-        where: { id: order.id },
-        data: { status: 'FAILED', provider_payload: midtransData },
-      });
-      throw new BadRequestException(
-        midtransData.status_message ?? 'Failed to create QRIS payment.',
-      );
-    }
-
-    const qrAction = (midtransData.actions as any[])?.find(
-      (a: any) => a.name === 'generate-qr-code',
-    );
-
-    await this.prisma.payment_orders.update({
-      where: { id: order.id },
-      data: {
-        qris_ref: midtransData.transaction_id,
-        provider_session_id: midtransData.transaction_id,
-        provider_payload: midtransData,
-      },
-    });
-
-    return {
-      order_id: order.id,
-      coins_amount: pkg.coins,
-      idr_amount: pkg.fiat,
-      currency: 'IDR',
-      qr_string: midtransData.qr_string ?? null,
-      qr_code_url: qrAction?.url ?? null,
-      expires_in_minutes: 30,
-      status: 'PENDING',
-    };
-  }
-
-  async handleMidtransWebhook(payload: any) {
-    const { order_id, transaction_status, status_code, gross_amount, signature_key } = payload;
-
-    if (!order_id || !transaction_status) {
-      throw new BadRequestException('Invalid webhook payload.');
-    }
-
-    // Verify signature (skip in dev when no key set)
-    if (process.env.MIDTRANS_SERVER_KEY) {
-      const expected = this.computeMidtransSignature(order_id, status_code, gross_amount);
-      if (signature_key !== expected) {
-        throw new UnauthorizedException('Invalid Midtrans signature.');
-      }
-    }
-
-    if (transaction_status === 'settlement' || transaction_status === 'capture') {
-      return this.fulfillOrder(order_id);
-    }
-
-    if (transaction_status === 'expire' || transaction_status === 'cancel' || transaction_status === 'deny') {
-      await this.prisma.payment_orders.updateMany({
-        where: { id: order_id, status: 'PENDING' },
-        data: { status: 'FAILED', updated_at: new Date() },
-      });
-      return { message: `Order marked FAILED (${transaction_status}).` };
-    }
-
-    return { message: `Webhook received, status: ${transaction_status}.` };
   }
 
   async fulfillOrder(orderId: string) {
@@ -213,8 +68,6 @@ export class CoinsService {
 
     return { message: 'Order fulfilled.', coins_added: order.coins_amount };
   }
-
-  // ---------- Tutor Withdrawal ----------
 
   async requestWithdrawal(tutorId: string, dto: WithdrawalRequestDto) {
     const profile = await this.prisma.profiles.findUnique({
