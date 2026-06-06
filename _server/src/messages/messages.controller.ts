@@ -10,8 +10,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { IsString, MinLength } from 'class-validator';
 import { MessagesService } from './messages.service';
 import { SendMessageDto } from './dto/send-message.dto';
+
+class ReportMessageDto {
+  @IsString()
+  @MinLength(5)
+  reason: string;
+}
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('messages')
@@ -22,6 +29,12 @@ export class MessagesController {
   @Post()
   sendMessage(@Request() req: any, @Body() dto: SendMessageDto) {
     return this.messagesService.sendMessage(req.user.userId || req.user.sub, dto);
+  }
+
+  // GET /messages/unread-count — total unread across all conversations
+  @Get('unread-count')
+  getUnreadCount(@Request() req: any) {
+    return this.messagesService.getUnreadCount(req.user.userId || req.user.sub);
   }
 
   // GET /messages/conversations — inbox: all threads with last message + unread count
@@ -59,5 +72,19 @@ export class MessagesController {
   @Patch(':id/read')
   markRead(@Param('id') id: string, @Request() req: any) {
     return this.messagesService.markRead(req.user.userId || req.user.sub, id);
+  }
+
+  // POST /messages/:id/report — report a message for admin review
+  @Post(':id/report')
+  reportMessage(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() dto: ReportMessageDto,
+  ) {
+    return this.messagesService.reportMessage(
+      req.user.userId || req.user.sub,
+      id,
+      dto.reason,
+    );
   }
 }

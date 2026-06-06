@@ -1,5 +1,7 @@
 import {
   IsArray,
+  IsDateString,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -8,6 +10,13 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+
+export const SUBJECT_CATEGORIES = [
+  'MATH', 'PHYSICS', 'CHEMISTRY', 'BIOLOGY', 'COMPUTER_SCIENCE', 'PROGRAMMING',
+  'LANGUAGE', 'ENGLISH', 'HISTORY', 'GEOGRAPHY', 'ECONOMICS', 'ACCOUNTING',
+  'LITERATURE', 'PHILOSOPHY', 'PSYCHOLOGY', 'SOCIAL_STUDIES', 'MUSIC', 'ART',
+  'ENGINEERING', 'MEDICINE', 'LAW', 'BUSINESS', 'STATISTICS', 'GENERAL', 'CUSTOM',
+] as const;
 
 export class CreateTutorOfferDto {
   @IsString()
@@ -41,4 +50,12 @@ export class CreateTutorOfferDto {
   @IsOptional()
   @IsUrl()
   thumbnail_url?: string;
+
+  @IsOptional()
+  @IsIn(SUBJECT_CATEGORIES)
+  subject_category?: string;
+
+  @IsOptional()
+  @IsDateString()
+  expires_at?: string;
 }

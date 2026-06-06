@@ -39,8 +39,14 @@ export class BookingController {
     @Query('status') status?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.bookingService.getStudentBookings(req.user.userId || req.user.sub, status, from, to);
+    return this.bookingService.getStudentBookings(
+      req.user.userId || req.user.sub, status, from, to,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 50,
+    );
   }
 
   @Get('tutor')
@@ -49,8 +55,14 @@ export class BookingController {
     @Query('status') status?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.bookingService.getTutorBookings(req.user.userId || req.user.sub, status, from, to);
+    return this.bookingService.getTutorBookings(
+      req.user.userId || req.user.sub, status, from, to,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 50,
+    );
   }
 
   @Get(':id')

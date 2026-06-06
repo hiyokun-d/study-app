@@ -94,6 +94,9 @@ export class BookingService {
         include: { profiles: true },
       });
       if (!offer) throw new NotFoundException('Offer not found or no longer active.');
+      if (offer.expires_at && offer.expires_at < new Date()) {
+        throw new BadRequestException('This offer has expired and is no longer available for booking.');
+      }
 
       tutorId = offer.tutor_id;
       durationMinutes = offer.duration_minutes;
@@ -327,13 +330,16 @@ export class BookingService {
     };
   }
 
-  async getStudentBookings(studentId: string, status?: string, from?: string, to?: string) {
+  async getStudentBookings(studentId: string, status?: string, from?: string, to?: string, page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
     const bookings = await this.prisma.bookings.findMany({
       where: {
         student_id: studentId,
         ...(status ? { status: status as any } : {}),
         ...((from || to) ? { start_at: { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to) }) } } : {}),
       },
+      skip,
+      take: limit,
       select: {
         id: true,
         start_at: true,
@@ -371,13 +377,16 @@ export class BookingService {
     });
   }
 
-  async getTutorBookings(tutorId: string, status?: string, from?: string, to?: string) {
+  async getTutorBookings(tutorId: string, status?: string, from?: string, to?: string, page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
     return this.prisma.bookings.findMany({
       where: {
         tutor_id: tutorId,
         ...(status ? { status: status as any } : {}),
         ...((from || to) ? { start_at: { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to) }) } } : {}),
       },
+      skip,
+      take: limit,
       select: {
         id: true,
         start_at: true,

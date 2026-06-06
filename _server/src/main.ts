@@ -3,6 +3,8 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+const compression = require('compression');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const express = require('express');
 import { AppModule } from './app.module';
 
@@ -21,6 +23,7 @@ async function initApp() {
     { logger: ['log', 'error', 'warn'] },
   );
 
+  app.use(compression());
   app.use(helmet());
 
   const allowedOrigins = (process.env.CORS_ORIGIN ?? '')

@@ -4,8 +4,23 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { SendMessageDto } from './dto/send-message.dto';
+
+const MSG_SELECT = {
+  id: true,
+  from_id: true,
+  to_id: true,
+  booking_id: true,
+  content: true,
+  metadata: true,
+  message_type: true,
+  attachment_url: true,
+  is_read: true,
+  read_at: true,
+  created_at: true,
+} as const;
 
 @Injectable()
 export class MessagesService {
@@ -14,6 +29,9 @@ export class MessagesService {
   async sendMessage(fromId: string, dto: SendMessageDto) {
     if (fromId === dto.to_id) {
       throw new BadRequestException('Cannot message yourself.');
+    }
+    if (!dto.content && !dto.attachment_url) {
+      throw new BadRequestException('Message must have content or an attachment.');
     }
 
     const recipient = await this.prisma.profiles.findUnique({
@@ -27,89 +45,85 @@ export class MessagesService {
         from_id: fromId,
         to_id: dto.to_id,
         booking_id: dto.booking_id ?? null,
-        content: dto.content,
+        content: dto.content ?? '',
         metadata: dto.metadata ?? {},
+        message_type: dto.message_type ?? 'TEXT',
+        attachment_url: dto.attachment_url ?? null,
       },
-      select: {
-        id: true,
-        from_id: true,
-        to_id: true,
-        booking_id: true,
-        content: true,
-        metadata: true,
-        is_read: true,
-        created_at: true,
-      },
+      select: MSG_SELECT,
     });
   }
 
+  // Optimized: 2 DB queries instead of N×3
   async getConversations(userId: string) {
-    const [sent, received] = await Promise.all([
-      this.prisma.messages.findMany({
-        where: { from_id: userId },
-        select: { to_id: true },
-        distinct: ['to_id'],
-      }),
-      this.prisma.messages.findMany({
-        where: { to_id: userId },
-        select: { from_id: true },
-        distinct: ['from_id'],
-      }),
-    ]);
+    type RawRow = {
+      id: string;
+      from_id: string;
+      to_id: string;
+      content: string;
+      is_read: boolean;
+      read_at: Date | null;
+      message_type: string;
+      attachment_url: string | null;
+      created_at: Date;
+      partner_id: string;
+      unread_count: number;
+    };
 
-    const partnerIds = Array.from(
-      new Set([...sent.map((m) => m.to_id), ...received.map((m) => m.from_id)]),
-    );
+    const rows = await this.prisma.$queryRaw<RawRow[]>(Prisma.sql`
+      WITH last_msgs AS (
+        SELECT DISTINCT ON (partner_id)
+          id, from_id, to_id, content, is_read, read_at, message_type, attachment_url, created_at,
+          CASE WHEN from_id = ${userId}::uuid THEN to_id ELSE from_id END AS partner_id
+        FROM messages
+        WHERE from_id = ${userId}::uuid OR to_id = ${userId}::uuid
+        ORDER BY partner_id, created_at DESC
+      ),
+      unread AS (
+        SELECT from_id AS partner_id, COUNT(*)::int AS cnt
+        FROM messages
+        WHERE to_id = ${userId}::uuid AND is_read = false
+        GROUP BY from_id
+      )
+      SELECT lm.*, COALESCE(u.cnt, 0) AS unread_count
+      FROM last_msgs lm
+      LEFT JOIN unread u ON u.partner_id = lm.partner_id
+      ORDER BY lm.created_at DESC
+    `);
 
-    if (partnerIds.length === 0) return [];
+    if (rows.length === 0) return [];
 
-    const conversations = await Promise.all(
-      partnerIds.map(async (partnerId) => {
-        const [lastMessage, unreadCount, partner] = await Promise.all([
-          this.prisma.messages.findFirst({
-            where: {
-              OR: [
-                { from_id: userId, to_id: partnerId },
-                { from_id: partnerId, to_id: userId },
-              ],
-            },
-            orderBy: { created_at: 'desc' },
-            select: {
-              id: true,
-              content: true,
-              from_id: true,
-              is_read: true,
-              created_at: true,
-              metadata: true,
-            },
-          }),
-          this.prisma.messages.count({
-            where: { from_id: partnerId, to_id: userId, is_read: false },
-          }),
-          this.prisma.profiles.findUnique({
-            where: { id: partnerId },
-            select: {
-              id: true,
-              full_name: true,
-              username: true,
-              avatar_url: true,
-              user_status: true,
-              role: true,
-            },
-          }),
-        ]);
+    const partnerIds = rows.map((r) => r.partner_id);
 
-        return { partner, last_message: lastMessage, unread_count: unreadCount };
-      }),
-    );
+    const partners = await this.prisma.profiles.findMany({
+      where: { id: { in: partnerIds } },
+      select: {
+        id: true,
+        full_name: true,
+        username: true,
+        avatar_url: true,
+        user_status: true,
+        role: true,
+      },
+    });
 
-    return conversations
-      .filter((c) => c.last_message)
-      .sort(
-        (a, b) =>
-          new Date(b.last_message!.created_at!).getTime() -
-          new Date(a.last_message!.created_at!).getTime(),
-      );
+    const partnerMap = new Map(partners.map((p) => [p.id, p]));
+
+    return rows.map((r) => ({
+      partner: partnerMap.get(r.partner_id) ?? null,
+      last_message: {
+        id: r.id,
+        from_id: r.from_id,
+        to_id: r.to_id,
+        content: r.content,
+        message_type: r.message_type,
+        attachment_url: r.attachment_url,
+        is_read: r.is_read,
+        read_at: r.read_at,
+        created_at: r.created_at,
+      },
+      unread_count: Number(r.unread_count),
+    }));
   }
 
   async getConversation(
@@ -141,16 +155,7 @@ export class MessagesService {
       },
       orderBy: { created_at: 'desc' },
       take: limit,
-      select: {
-        id: true,
-        from_id: true,
-        to_id: true,
-        booking_id: true,
-        content: true,
-        metadata: true,
-        is_read: true,
-        created_at: true,
-      },
+      select: MSG_SELECT,
     });
 
     return {
@@ -170,7 +175,7 @@ export class MessagesService {
 
     await this.prisma.messages.update({
       where: { id: messageId },
-      data: { is_read: true },
+      data: { is_read: true, read_at: new Date() },
     });
     return { message: 'Marked as read.' };
   }
@@ -178,8 +183,39 @@ export class MessagesService {
   async markAllRead(userId: string, partnerId: string) {
     const { count } = await this.prisma.messages.updateMany({
       where: { from_id: partnerId, to_id: userId, is_read: false },
-      data: { is_read: true },
+      data: { is_read: true, read_at: new Date() },
     });
     return { marked_count: count };
+  }
+
+  async getUnreadCount(userId: string) {
+    const count = await this.prisma.messages.count({
+      where: { to_id: userId, is_read: false },
+    });
+    return { count };
+  }
+
+  async reportMessage(userId: string, messageId: string, reason: string) {
+    const message = await this.prisma.messages.findUnique({
+      where: { id: messageId },
+      select: { id: true, from_id: true, to_id: true, is_reported: true },
+    });
+    if (!message) throw new NotFoundException('Message not found.');
+    if (message.to_id !== userId && message.from_id !== userId) {
+      throw new ForbiddenException('You are not part of this conversation.');
+    }
+    if (message.is_reported) {
+      throw new BadRequestException('Message already reported.');
+    }
+    if (!reason?.trim()) {
+      throw new BadRequestException('Report reason is required.');
+    }
+
+    await this.prisma.messages.update({
+      where: { id: messageId },
+      data: { is_reported: true, report_reason: reason.trim() },
+    });
+
+    return { message: 'Message reported. Admin will review it.' };
   }
 }

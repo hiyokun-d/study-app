@@ -462,6 +462,52 @@ export class AdminService {
     return user;
   }
 
+  async getReportedMessages(page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [messages, total] = await Promise.all([
+      this.prisma.messages.findMany({
+        where: { is_reported: true },
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        select: {
+          id: true,
+          content: true,
+          message_type: true,
+          attachment_url: true,
+          report_reason: true,
+          created_at: true,
+          booking_id: true,
+          profiles_messages_from_idToprofiles: {
+            select: { id: true, full_name: true, username: true, avatar_url: true },
+          },
+          profiles_messages_to_idToprofiles: {
+            select: { id: true, full_name: true, username: true, avatar_url: true },
+          },
+        },
+      }),
+      this.prisma.messages.count({ where: { is_reported: true } }),
+    ]);
+    return { data: messages, total, page, limit };
+  }
+
+  async dismissReport(messageId: string) {
+    const msg = await this.prisma.messages.findUnique({ where: { id: messageId } });
+    if (!msg) throw new NotFoundException('Message not found.');
+    await this.prisma.messages.update({
+      where: { id: messageId },
+      data: { is_reported: false, report_reason: null },
+    });
+    return { message: 'Report dismissed.' };
+  }
+
+  async deleteReportedMessage(messageId: string) {
+    const msg = await this.prisma.messages.findUnique({ where: { id: messageId } });
+    if (!msg) throw new NotFoundException('Message not found.');
+    await this.prisma.messages.delete({ where: { id: messageId } });
+    return { message: 'Message deleted.' };
+  }
+
   async getPaymentOrders(page = 1, limit = 20, status?: string) {
     const skip = (page - 1) * limit;
     const where = status ? { status } : {};

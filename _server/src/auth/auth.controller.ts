@@ -23,7 +23,7 @@ export class AuthController {
     return this.authService.signUp(body.email, body.password, body.role);
   }
 
-  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('login')
   login(@Body() body: LoginDto) {
     return this.authService.login(body.email, body.password);

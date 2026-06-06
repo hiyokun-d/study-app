@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -209,5 +210,35 @@ export class AdminController {
   ) {
     const adminId = req.user.userId || req.user.sub;
     return this.adminService.processWithdrawal(adminId, id, dto);
+  }
+
+  // GET /admin/reports/messages — list all reported messages
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  @Get('reports/messages')
+  getReportedMessages(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.adminService.getReportedMessages(
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+    );
+  }
+
+  // PATCH /admin/reports/messages/:id/dismiss — clear the report flag
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  @Patch('reports/messages/:id/dismiss')
+  dismissReport(@Param('id') id: string) {
+    return this.adminService.dismissReport(id);
+  }
+
+  // DELETE /admin/reports/messages/:id — delete the offending message
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  @Post('reports/messages/:id/delete')
+  deleteReportedMessage(@Param('id') id: string) {
+    return this.adminService.deleteReportedMessage(id);
   }
 }

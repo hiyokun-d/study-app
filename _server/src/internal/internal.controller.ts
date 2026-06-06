@@ -4,12 +4,14 @@ import {
   Get,
   Headers,
   HttpCode,
+  Logger,
 } from '@nestjs/common';
 import { timingSafeEqual } from 'crypto';
 import { PrismaService } from 'src/prisma.service';
 
 @Controller('internal')
 export class InternalController {
+  private readonly logger = new Logger(InternalController.name);
   constructor(private prisma: PrismaService) {}
 
   private checkSecret(secret: string) {
@@ -230,6 +232,56 @@ export class InternalController {
       expired_bookings: expiredBookings.length,
       cleared_price_proposals: expiredProposals.length,
       auto_completed_sessions: staleSessions.length,
+    };
+  }
+
+  // GET /internal/cleanup
+  // Vercel Cron: daily. Purges old data and deactivates expired offers.
+  @Get('cleanup')
+  @HttpCode(200)
+  async cleanup(@Headers('x-internal-secret') secret: string) {
+    this.checkSecret(secret);
+
+    const now = new Date();
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60_000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60_000);
+
+    // 1. Delete messages older than 3 days
+    const { count: deletedOldMessages } = await this.prisma.messages.deleteMany({
+      where: { created_at: { lt: threeDaysAgo } },
+    });
+
+    // 2. Delete messages from closed booking threads (any age)
+    const { count: deletedClosedMessages } = await this.prisma.messages.deleteMany({
+      where: {
+        booking_id: { not: null },
+        bookings: {
+          status: { in: ['completed', 'cancelled', 'declined', 'expired'] },
+        },
+      },
+    });
+
+    // 3. Deactivate tutor offers where expires_at has passed
+    const { count: deactivatedOffers } = await this.prisma.tutor_offers.updateMany({
+      where: { expires_at: { lt: now }, is_active: true },
+      data: { is_active: false, updated_at: now },
+    });
+
+    // 4. Delete seen notifications older than 30 days
+    const { count: deletedNotifications } = await this.prisma.notifications.deleteMany({
+      where: { seen: true, created_at: { lt: thirtyDaysAgo } },
+    });
+
+    this.logger.log(
+      `Cleanup: deleted ${deletedOldMessages + deletedClosedMessages} messages, ` +
+      `deactivated ${deactivatedOffers} offers, deleted ${deletedNotifications} notifications`,
+    );
+
+    return {
+      deleted_old_messages: deletedOldMessages,
+      deleted_closed_thread_messages: deletedClosedMessages,
+      deactivated_expired_offers: deactivatedOffers,
+      deleted_old_notifications: deletedNotifications,
     };
   }
 }

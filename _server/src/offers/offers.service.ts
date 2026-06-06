@@ -41,16 +41,19 @@ export class OffersService {
   async browseOffers(opts: {
     search?: string;
     subject?: string;
+    category?: string;
     maxCoins?: number;
     minRating?: number;
     page?: number;
     limit?: number;
   }) {
-    const { search, subject, maxCoins, minRating, page = 1, limit = 20 } = opts;
+    const { search, subject, category, maxCoins, minRating, page = 1, limit = 20 } = opts;
     const skip = (page - 1) * limit;
+    const now = new Date();
 
     const where: any = {
       is_active: true,
+      OR: [{ expires_at: null }, { expires_at: { gt: now } }],
       profiles: {
         verification_status: 'APPROVED',
         is_active: true,
@@ -65,6 +68,7 @@ export class OffersService {
       }),
       ...(maxCoins && { coins_per_hour: { lte: maxCoins } }),
       ...(subject && { subject_ids: { has: subject } }),
+      ...(category && { subject_category: category }),
     };
 
     const [raw, total] = await Promise.all([
@@ -81,6 +85,8 @@ export class OffersService {
           coins_per_hour: true,
           duration_minutes: true,
           subject_ids: true,
+          subject_category: true,
+          expires_at: true,
           created_at: true,
           profiles: { select: TUTOR_SELECT },
         },
@@ -102,8 +108,14 @@ export class OffersService {
   }
 
   async getOfferDetail(offerId: string) {
+    const now = new Date();
     const offer = await this.prisma.tutor_offers.findFirst({
-      where: { id: offerId, is_active: true, profiles: { is_active: true, is_banned: false } },
+      where: {
+        id: offerId,
+        is_active: true,
+        OR: [{ expires_at: null }, { expires_at: { gt: now } }],
+        profiles: { is_active: true, is_banned: false },
+      },
       select: {
         id: true,
         title: true,
@@ -113,6 +125,8 @@ export class OffersService {
         coins_per_hour: true,
         duration_minutes: true,
         subject_ids: true,
+        subject_category: true,
+        expires_at: true,
         created_at: true,
         updated_at: true,
         profiles: {
@@ -126,9 +140,8 @@ export class OffersService {
       },
     });
 
-    if (!offer) throw new NotFoundException('Offer not found.');
+    if (!offer) throw new NotFoundException('Offer not found or has expired.');
 
-    // Recent reviews for this tutor
     const reviews = await this.prisma.reviews.findMany({
       where: { reviewee_id: offer.profiles.id },
       orderBy: { created_at: 'desc' },

@@ -5,11 +5,12 @@ import { OffersService } from './offers.service';
 export class OffersController {
   constructor(private readonly offersService: OffersService) {}
 
-  // GET /offers?search=math&subject=uuid&maxCoins=20&minRating=4&page=1&limit=20
+  // GET /offers?search=math&subject=uuid&category=MATH&maxCoins=20&minRating=4&page=1&limit=20
   @Get()
   browseOffers(
     @Query('search') search?: string,
     @Query('subject') subject?: string,
+    @Query('category') category?: string,
     @Query('maxCoins') maxCoins?: string,
     @Query('minRating') minRating?: string,
     @Query('page') page?: string,
@@ -18,6 +19,7 @@ export class OffersController {
     return this.offersService.browseOffers({
       search,
       subject,
+      category,
       maxCoins: maxCoins ? parseInt(maxCoins, 10) : undefined,
       minRating: minRating ? parseFloat(minRating) : undefined,
       page: page ? parseInt(page, 10) : 1,

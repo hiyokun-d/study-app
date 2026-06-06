@@ -1,6 +1,8 @@
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -9,6 +11,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { SUBJECT_CATEGORIES } from './create-tutor-offer.dto';
 
 export class UpdateTutorOfferDto {
   @IsOptional()
@@ -48,4 +51,12 @@ export class UpdateTutorOfferDto {
   @IsOptional()
   @IsUrl()
   thumbnail_url?: string;
+
+  @IsOptional()
+  @IsIn(SUBJECT_CATEGORIES)
+  subject_category?: string;
+
+  @IsOptional()
+  @IsDateString()
+  expires_at?: string;
 }

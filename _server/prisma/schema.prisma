@@ -58,15 +58,26 @@ model messages {
   from_id                             String    @db.Uuid
   to_id                               String    @db.Uuid
   booking_id                          String?   @db.Uuid
-  content                             String
+  content                             String    @default("")
   metadata                            Json?     @default("{}")
   created_at                          DateTime? @default(now()) @db.Timestamptz(6)
   is_read                             Boolean?  @default(false)
+  /// exact timestamp when recipient opened the message
+  read_at                             DateTime? @db.Timestamptz(6)
+  /// TEXT | IMAGE | FILE | SYSTEM
+  message_type                        String    @default("TEXT")
+  /// Supabase Storage public URL for image/file messages
+  attachment_url                      String?
+  /// flagged by recipient for admin review
+  is_reported                         Boolean   @default(false)
+  report_reason                       String?
   bookings                            bookings? @relation(fields: [booking_id], references: [id], onUpdate: NoAction)
   profiles_messages_from_idToprofiles profiles  @relation("messages_from_idToprofiles", fields: [from_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   profiles_messages_to_idToprofiles   profiles  @relation("messages_to_idToprofiles", fields: [to_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([from_id, to_id, created_at(sort: Desc)], map: "idx_messages_conversation")
+  @@index([created_at], map: "idx_messages_created_at")
+  @@index([is_reported], map: "idx_messages_reported")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -239,11 +250,17 @@ model tutor_offers {
   /// session price in coins (overrides profile book_price_coins when set)
   coins_per_hour   Int        @default(10)
   thumbnail_url    String?
+  /// MATH|PHYSICS|CHEMISTRY|BIOLOGY|COMPUTER_SCIENCE|PROGRAMMING|LANGUAGE|ENGLISH|HISTORY|GEOGRAPHY|ECONOMICS|ACCOUNTING|LITERATURE|PHILOSOPHY|PSYCHOLOGY|SOCIAL_STUDIES|MUSIC|ART|ENGINEERING|MEDICINE|LAW|BUSINESS|STATISTICS|CUSTOM|GENERAL
+  subject_category String     @default("GENERAL")
+  /// offer auto-deactivates and blocks new bookings after this date
+  expires_at       DateTime?  @db.Timestamptz(6)
   bookings         bookings[]
   profiles         profiles   @relation(fields: [tutor_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([is_active], map: "idx_tutor_offers_active")
   @@index([tutor_id], map: "idx_tutor_offers_tutor")
+  @@index([subject_category], map: "idx_tutor_offers_category")
+  @@index([expires_at], map: "idx_tutor_offers_expires")
 }
 
 /// Coin ledger — one row per credit/debit event

@@ -149,7 +149,10 @@ export class UserService {
         penalty_rating_knock: true,
         penalty_price_pct: true,
         tutor_offers: {
-          where: { is_active: true },
+          where: {
+            is_active: true,
+            OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
+          },
           select: {
             id: true,
             title: true,
@@ -158,6 +161,8 @@ export class UserService {
             coins_per_hour: true,
             duration_minutes: true,
             subject_ids: true,
+            subject_category: true,
+            expires_at: true,
           },
         },
       },
@@ -294,21 +299,25 @@ export class UserService {
     });
     if (!tutor) throw new NotFoundException('User not found.');
     if (tutor.role !== 'TUTOR') throw new ForbiddenException('Only tutors can create offers.');
+    if (tutor.verification_status !== 'APPROVED') {
+      throw new ForbiddenException('Tutor must be verified before creating offers.');
+    }
 
     const duration = dto.duration_minutes ?? 60;
-    const coinsCost = Math.ceil((dto.coins_per_hour * duration) / 60);
 
     return this.prisma.tutor_offers.create({
       data: {
         tutor_id: tutorId,
-        title: dto.title,
-        summary: dto.summary,
-        about: dto.about,
+        title: dto.title?.trim(),
+        summary: dto.summary?.trim(),
+        about: dto.about?.trim(),
         coins_per_hour: dto.coins_per_hour,
         price_per_hour: 0,
         duration_minutes: duration,
         subject_ids: dto.subject_ids ?? [],
         thumbnail_url: dto.thumbnail_url,
+        subject_category: dto.subject_category ?? 'GENERAL',
+        expires_at: dto.expires_at ? new Date(dto.expires_at) : null,
         is_active: true,
       },
       select: {
@@ -319,6 +328,8 @@ export class UserService {
         coins_per_hour: true,
         duration_minutes: true,
         subject_ids: true,
+        subject_category: true,
+        expires_at: true,
         is_active: true,
         created_at: true,
       },
@@ -326,8 +337,9 @@ export class UserService {
   }
 
   async getMyOffers(tutorId: string) {
+    const now = new Date();
     const offers = await this.prisma.tutor_offers.findMany({
-      where: { tutor_id: tutorId, is_active: true },
+      where: { tutor_id: tutorId },
       select: {
         id: true,
         title: true,
@@ -337,6 +349,8 @@ export class UserService {
         coins_per_hour: true,
         duration_minutes: true,
         subject_ids: true,
+        subject_category: true,
+        expires_at: true,
         is_active: true,
         created_at: true,
         updated_at: true,
@@ -346,6 +360,7 @@ export class UserService {
 
     return offers.map((o) => ({
       ...o,
+      is_expired: o.expires_at ? o.expires_at < now : false,
       coins_per_session: Math.ceil((o.coins_per_hour * o.duration_minutes) / 60),
     }));
   }
@@ -359,14 +374,16 @@ export class UserService {
     return this.prisma.tutor_offers.update({
       where: { id: offerId },
       data: {
-        ...(dto.title !== undefined && { title: dto.title }),
-        ...(dto.summary !== undefined && { summary: dto.summary }),
-        ...(dto.about !== undefined && { about: dto.about }),
+        ...(dto.title !== undefined && { title: dto.title?.trim() }),
+        ...(dto.summary !== undefined && { summary: dto.summary?.trim() }),
+        ...(dto.about !== undefined && { about: dto.about?.trim() }),
         ...(dto.coins_per_hour !== undefined && { coins_per_hour: dto.coins_per_hour }),
         ...(dto.duration_minutes !== undefined && { duration_minutes: dto.duration_minutes }),
         ...(dto.subject_ids !== undefined && { subject_ids: dto.subject_ids }),
         ...(dto.is_active !== undefined && { is_active: dto.is_active }),
         ...(dto.thumbnail_url !== undefined && { thumbnail_url: dto.thumbnail_url }),
+        ...(dto.subject_category !== undefined && { subject_category: dto.subject_category }),
+        ...(dto.expires_at !== undefined && { expires_at: dto.expires_at ? new Date(dto.expires_at) : null }),
         updated_at: new Date(),
       },
       select: {
@@ -377,6 +394,8 @@ export class UserService {
         coins_per_hour: true,
         duration_minutes: true,
         subject_ids: true,
+        subject_category: true,
+        expires_at: true,
         is_active: true,
         updated_at: true,
       },
@@ -446,9 +465,9 @@ export class UserService {
     const updated = await this.prisma.profiles.update({
       where: { id: userId },
       data: {
-        ...(data.full_name !== undefined && { full_name: data.full_name }),
-        ...(data.username !== undefined && { username: data.username }),
-        ...(data.bio !== undefined && { bio: data.bio }),
+        ...(data.full_name !== undefined && { full_name: data.full_name?.trim() }),
+        ...(data.username !== undefined && { username: data.username?.trim() }),
+        ...(data.bio !== undefined && { bio: data.bio?.trim() }),
         ...(data.avatar_url !== undefined && { avatar_url: data.avatar_url }),
         ...(data.role && { role: data.role.toUpperCase() }),
         ...(data.book_price_coins !== undefined && { book_price_coins: data.book_price_coins }),

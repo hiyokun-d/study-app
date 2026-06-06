@@ -15,6 +15,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OffersModule } from './offers/offers.module';
 import { MessagesModule } from './messages/messages.module';
 import { InternalModule } from './internal/internal.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { InternalModule } from './internal/internal.module';
     OffersModule,
     MessagesModule,
     InternalModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [
