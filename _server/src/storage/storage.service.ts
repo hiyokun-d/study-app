@@ -4,7 +4,7 @@ import { PrismaService } from 'src/prisma.service';
 const AVATAR_BUCKET = 'user pict';
 const FILE_BUCKET = 'user file';
 
-const AVATAR_MAX_BYTES = 6 * 1024 * 1024; // 6 MB — mirrors Supabase bucket policy
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024; // 5 MB — mirrors Supabase bucket policy
 const FILE_MAX_BYTES = 10 * 1024 * 1024;  // 10 MB for chat attachments
 
 const ALLOWED_FILE_TYPES = [
@@ -53,6 +53,7 @@ export class StorageService {
         Authorization: `Bearer ${this.serviceKey}`,
         'Content-Type': 'application/json',
       },
+      body: '{}',
     });
 
     if (!res.ok) {
@@ -60,8 +61,12 @@ export class StorageService {
       throw new InternalServerErrorException(`Failed to generate upload URL: ${err}`);
     }
 
+    // Supabase returns a relative path like "/object/upload/sign/bucket name/file?token=..."
+    // We must prepend /storage/v1 and encode spaces in the path segments.
     const json = (await res.json()) as { url: string };
-    return `${this.supabaseUrl}${json.url}`;
+    const [pathPart, query] = json.url.split('?');
+    const encodedPath = pathPart.split('/').map(s => encodeURIComponent(s)).join('/');
+    return `${this.supabaseUrl}/storage/v1${encodedPath}?${query}`;
   }
 
   // Generate a signed upload URL for the user's profile picture.
