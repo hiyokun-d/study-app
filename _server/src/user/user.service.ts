@@ -158,11 +158,14 @@ export class UserService {
             title: true,
             summary: true,
             thumbnail_url: true,
-            coins_per_hour: true,
+            coins_per_session: true,
             duration_minutes: true,
             subject_ids: true,
             subject_category: true,
             expires_at: true,
+            available_days: true,
+            available_time_from: true,
+            available_time_to: true,
           },
         },
       },
@@ -177,14 +180,10 @@ export class UserService {
     return {
       ...applyPenalty(tutor),
       tutor_offers: tutor.tutor_offers.map((o) => {
-        const coinsPerHour = penalized && pricePct > 0
-          ? Math.ceil(o.coins_per_hour * (1 - pricePct / 100))
-          : o.coins_per_hour;
-        return {
-          ...o,
-          coins_per_hour: coinsPerHour,
-          coins_per_session: Math.ceil((coinsPerHour * o.duration_minutes) / 60),
-        };
+        const effectiveCoins = penalized && pricePct > 0
+          ? Math.ceil(o.coins_per_session * (1 - pricePct / 100))
+          : o.coins_per_session;
+        return { ...o, coins_per_session: effectiveCoins };
       }),
     };
   }
@@ -229,12 +228,14 @@ export class UserService {
         available_from: from,
         available_to: to,
         timezone: dto.timezone,
+        max_capacity: dto.max_capacity ?? 1,
       },
       select: {
         id: true,
         available_from: true,
         available_to: true,
         timezone: true,
+        max_capacity: true,
         created_at: true,
       },
     });
@@ -242,31 +243,23 @@ export class UserService {
 
   async getTutorAvailability(tutorId: string) {
     const now = new Date();
-    // Slots that are in the future and not tied to a pending/confirmed booking
-    const bookedSlotIds = await this.prisma.bookings.findMany({
-      where: {
-        tutor_id: tutorId,
-        status: { in: ['pending', 'confirmed'] },
-        tutor_availability_id: { not: null },
-      },
-      select: { tutor_availability_id: true },
-    });
-    const bookedIds = bookedSlotIds.map((b) => b.tutor_availability_id).filter(Boolean) as string[];
 
-    return this.prisma.tutor_availabilities.findMany({
-      where: {
-        tutor_id: tutorId,
-        available_from: { gt: now },
-        ...(bookedIds.length > 0 && { id: { notIn: bookedIds } }),
-      },
+    const slots = await this.prisma.tutor_availabilities.findMany({
+      where: { tutor_id: tutorId, available_from: { gt: now } },
       select: {
         id: true,
         available_from: true,
         available_to: true,
         timezone: true,
+        max_capacity: true,
+        _count: { select: { bookings: { where: { status: { in: ['pending', 'confirmed'] } } } } },
       },
       orderBy: { available_from: 'asc' },
     });
+
+    return slots
+      .filter((s) => s._count.bookings < s.max_capacity)
+      .map(({ _count, ...s }) => ({ ...s, bookings_count: _count.bookings, spots_left: s.max_capacity - _count.bookings }));
   }
 
   async deleteAvailability(tutorId: string, slotId: string) {
@@ -311,13 +304,16 @@ export class UserService {
         title: dto.title?.trim(),
         summary: dto.summary?.trim(),
         about: dto.about?.trim(),
-        coins_per_hour: dto.coins_per_hour,
+        coins_per_session: dto.coins_per_session,
         price_per_hour: 0,
         duration_minutes: duration,
         subject_ids: dto.subject_ids ?? [],
         thumbnail_url: dto.thumbnail_url,
         subject_category: dto.subject_category ?? 'GENERAL',
         expires_at: dto.expires_at ? new Date(dto.expires_at) : null,
+        available_days: dto.available_days ?? [],
+        available_time_from: dto.available_time_from ?? null,
+        available_time_to: dto.available_time_to ?? null,
         is_active: true,
       },
       select: {
@@ -325,12 +321,15 @@ export class UserService {
         title: true,
         summary: true,
         thumbnail_url: true,
-        coins_per_hour: true,
+        coins_per_session: true,
         duration_minutes: true,
         subject_ids: true,
         subject_category: true,
         expires_at: true,
         is_active: true,
+        available_days: true,
+        available_time_from: true,
+        available_time_to: true,
         created_at: true,
       },
     });
@@ -346,12 +345,15 @@ export class UserService {
         summary: true,
         about: true,
         thumbnail_url: true,
-        coins_per_hour: true,
+        coins_per_session: true,
         duration_minutes: true,
         subject_ids: true,
         subject_category: true,
         expires_at: true,
         is_active: true,
+        available_days: true,
+        available_time_from: true,
+        available_time_to: true,
         created_at: true,
         updated_at: true,
       },
@@ -361,7 +363,6 @@ export class UserService {
     return offers.map((o) => ({
       ...o,
       is_expired: o.expires_at ? o.expires_at < now : false,
-      coins_per_session: Math.ceil((o.coins_per_hour * o.duration_minutes) / 60),
     }));
   }
 
@@ -377,13 +378,16 @@ export class UserService {
         ...(dto.title !== undefined && { title: dto.title?.trim() }),
         ...(dto.summary !== undefined && { summary: dto.summary?.trim() }),
         ...(dto.about !== undefined && { about: dto.about?.trim() }),
-        ...(dto.coins_per_hour !== undefined && { coins_per_hour: dto.coins_per_hour }),
+        ...(dto.coins_per_session !== undefined && { coins_per_session: dto.coins_per_session }),
         ...(dto.duration_minutes !== undefined && { duration_minutes: dto.duration_minutes }),
         ...(dto.subject_ids !== undefined && { subject_ids: dto.subject_ids }),
         ...(dto.is_active !== undefined && { is_active: dto.is_active }),
         ...(dto.thumbnail_url !== undefined && { thumbnail_url: dto.thumbnail_url }),
         ...(dto.subject_category !== undefined && { subject_category: dto.subject_category }),
         ...(dto.expires_at !== undefined && { expires_at: dto.expires_at ? new Date(dto.expires_at) : null }),
+        ...(dto.available_days !== undefined && { available_days: dto.available_days }),
+        ...(dto.available_time_from !== undefined && { available_time_from: dto.available_time_from }),
+        ...(dto.available_time_to !== undefined && { available_time_to: dto.available_time_to }),
         updated_at: new Date(),
       },
       select: {
@@ -391,12 +395,15 @@ export class UserService {
         title: true,
         summary: true,
         thumbnail_url: true,
-        coins_per_hour: true,
+        coins_per_session: true,
         duration_minutes: true,
         subject_ids: true,
         subject_category: true,
         expires_at: true,
         is_active: true,
+        available_days: true,
+        available_time_from: true,
+        available_time_to: true,
         updated_at: true,
       },
     });

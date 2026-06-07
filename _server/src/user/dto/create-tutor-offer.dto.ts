@@ -7,6 +7,7 @@ import {
   IsString,
   IsUrl,
   IsUUID,
+  Matches,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -17,6 +18,8 @@ export const SUBJECT_CATEGORIES = [
   'LITERATURE', 'PHILOSOPHY', 'PSYCHOLOGY', 'SOCIAL_STUDIES', 'MUSIC', 'ART',
   'ENGINEERING', 'MEDICINE', 'LAW', 'BUSINESS', 'STATISTICS', 'GENERAL', 'CUSTOM',
 ] as const;
+
+export const WEEK_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const;
 
 export class CreateTutorOfferDto {
   @IsString()
@@ -35,7 +38,7 @@ export class CreateTutorOfferDto {
 
   @IsInt()
   @Min(1)
-  coins_per_hour: number;
+  coins_per_session: number;
 
   @IsOptional()
   @IsInt()
@@ -58,4 +61,17 @@ export class CreateTutorOfferDto {
   @IsOptional()
   @IsDateString()
   expires_at?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsIn(WEEK_DAYS, { each: true })
+  available_days?: string[];
+
+  @IsOptional()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'available_time_from must be HH:MM' })
+  available_time_from?: string;
+
+  @IsOptional()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'available_time_to must be HH:MM' })
+  available_time_to?: string;
 }

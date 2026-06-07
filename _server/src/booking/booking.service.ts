@@ -85,7 +85,8 @@ export class BookingService {
 
     let tutorId = dto.tutorId!;
     let durationMinutes = dto.durationMinutes ?? 60;
-    let coinRatePerHour: number;
+    let coinsCostFlat: number | undefined;
+    let coinRatePerHour: number | undefined;
     let endAt: Date;
 
     if (dto.tutorOfferId) {
@@ -100,7 +101,7 @@ export class BookingService {
 
       tutorId = offer.tutor_id;
       durationMinutes = offer.duration_minutes;
-      coinRatePerHour = offer.coins_per_hour;
+      coinsCostFlat = offer.coins_per_session;
       endAt = new Date(new Date(dto.startAt).getTime() + durationMinutes * 60_000);
     } else {
       const tutor = await this.prisma.profiles.findFirst({
@@ -121,6 +122,8 @@ export class BookingService {
     if (tutorId === studentId) throw new BadRequestException('Cannot book yourself.');
 
     let availabilityId: string | undefined;
+    const newStart = new Date(dto.startAt);
+
     if (dto.availabilityId) {
       const slot = await this.prisma.tutor_availabilities.findFirst({
         where: { id: dto.availabilityId, tutor_id: tutorId },
@@ -131,24 +134,35 @@ export class BookingService {
         );
       }
       availabilityId = dto.availabilityId;
+
+      // Slot-based: check capacity
+      const takenCount = await this.prisma.bookings.count({
+        where: { tutor_availability_id: availabilityId, status: { in: ['pending', 'confirmed'] } },
+      });
+      if (takenCount >= slot.max_capacity) {
+        throw new BadRequestException('This availability slot is fully booked.');
+      }
+    } else {
+      // Non-slot: only block if there is already a CONFIRMED booking at this time
+      const conflict = await this.prisma.bookings.findFirst({
+        where: {
+          tutor_id: tutorId,
+          status: 'confirmed',
+          start_at: { lt: endAt },
+          end_at: { gt: newStart },
+        },
+      });
+      if (conflict) {
+        throw new BadRequestException(
+          `Tutor already has a confirmed booking from ${conflict.start_at.toISOString()} to ${conflict.end_at.toISOString()}.`,
+        );
+      }
     }
 
-    const newStart = new Date(dto.startAt);
-    const conflict = await this.prisma.bookings.findFirst({
-      where: {
-        tutor_id: tutorId,
-        status: { in: ['pending', 'confirmed'] },
-        start_at: { lt: endAt },
-        end_at: { gt: newStart },
-      },
-    });
-    if (conflict) {
-      throw new BadRequestException(
-        `Tutor is already booked from ${conflict.start_at.toISOString()} to ${conflict.end_at.toISOString()}.`,
-      );
-    }
-
-    const coinsCost = Math.ceil((coinRatePerHour * durationMinutes) / 60);
+    // Flat session price for offer bookings; hourly rate for direct (profile-based) bookings
+    const coinsCost = coinsCostFlat !== undefined
+      ? coinsCostFlat
+      : Math.ceil((coinRatePerHour! * durationMinutes) / 60);
 
     const student = await this.prisma.profiles.findUnique({
       where: { id: studentId },
@@ -257,7 +271,7 @@ export class BookingService {
             id: true,
             title: true,
             summary: true,
-            coins_per_hour: true,
+            coins_per_session: true,
             duration_minutes: true,
           },
         },
@@ -453,23 +467,24 @@ export class BookingService {
 
   // ─── price negotiation ───────────────────────────────────────────────────────
 
-  async proposePrice(bookingId: string, tutorId: string, dto: ProposePriceDto) {
+  async proposePrice(bookingId: string, userId: string, dto: ProposePriceDto) {
     const booking = await this.prisma.bookings.findUnique({ where: { id: bookingId } });
     if (!booking) throw new NotFoundException('Booking not found.');
-    if (booking.tutor_id !== tutorId) {
-      throw new ForbiddenException('Only the tutor can propose a price change.');
-    }
+
+    const isParty = booking.student_id === userId || booking.tutor_id === userId;
+    if (!isParty) throw new ForbiddenException('Not your booking.');
     if (booking.status !== 'pending') {
       throw new BadRequestException('Price can only be proposed on pending bookings.');
     }
-    if (dto.proposed_coins <= (booking.coins_cost ?? 0)) {
-      throw new BadRequestException('Proposed price must be higher than current price.');
+    if (dto.proposed_coins === (booking.coins_cost ?? 0)) {
+      throw new BadRequestException('Proposed price is the same as the current price.');
     }
-    if (booking.price_proposed_coins) {
-      throw new BadRequestException('A price proposal is already pending.');
+    if (booking.price_proposed_coins && booking.price_proposed_by === userId) {
+      throw new BadRequestException('Wait for the other party to respond before proposing again.');
     }
 
     const expiresAt = new Date(Date.now() + PRICE_PROPOSAL_EXPIRY_MS);
+    const notifyId = booking.student_id === userId ? booking.tutor_id : booking.student_id;
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.bookings.update({
@@ -478,22 +493,25 @@ export class BookingService {
           price_proposed_coins: dto.proposed_coins,
           price_proposal_message: dto.message,
           price_proposal_expires_at: expiresAt,
+          price_proposed_by: userId,
           updated_at: new Date(),
         },
         select: {
           id: true,
           coins_cost: true,
           price_proposed_coins: true,
+          price_proposed_by: true,
           price_proposal_message: true,
           price_proposal_expires_at: true,
         },
       }),
       this.prisma.notifications.create({
         data: {
-          profile_id: booking.student_id,
+          profile_id: notifyId,
           type: 'PRICE_PROPOSED',
           payload: {
             booking_id: bookingId,
+            proposed_by: userId,
             original_coins: booking.coins_cost,
             proposed_coins: dto.proposed_coins,
             message: dto.message ?? null,
@@ -506,40 +524,36 @@ export class BookingService {
     return updated;
   }
 
-  async acceptPrice(bookingId: string, studentId: string) {
+  async acceptPrice(bookingId: string, userId: string) {
     const booking = await this.prisma.bookings.findUnique({ where: { id: bookingId } });
     if (!booking) throw new NotFoundException('Booking not found.');
-    if (booking.student_id !== studentId) {
-      throw new ForbiddenException('Only the student can accept a price proposal.');
-    }
+
+    const isParty = booking.student_id === userId || booking.tutor_id === userId;
+    if (!isParty) throw new ForbiddenException('Not your booking.');
     if (!booking.price_proposed_coins) {
       throw new BadRequestException('No price proposal on this booking.');
+    }
+    if (booking.price_proposed_by === userId) {
+      throw new ForbiddenException('Cannot accept your own proposal.');
     }
     if (booking.price_proposal_expires_at && booking.price_proposal_expires_at < new Date()) {
       throw new BadRequestException('Price proposal has expired.');
     }
 
-    const diff = booking.price_proposed_coins - (booking.coins_cost ?? 0);
-
-    const student = await this.prisma.profiles.findUnique({
-      where: { id: studentId },
-      select: { coins_balance: true },
-    });
-    if (!student) throw new NotFoundException('Student not found.');
-    if (student.coins_balance < diff) {
-      throw new BadRequestException(
-        `Insufficient coins for price difference. Need ${diff} more coins.`,
-      );
-    }
+    const studentId = booking.student_id;
+    const currentCost = booking.coins_cost ?? 0;
+    const proposedCost = booking.price_proposed_coins;
+    const diff = proposedCost - currentCost;
 
     const ops: any[] = [
       this.prisma.bookings.update({
         where: { id: bookingId },
         data: {
-          coins_cost: booking.price_proposed_coins,
+          coins_cost: proposedCost,
           price_proposed_coins: null,
           price_proposal_message: null,
           price_proposal_expires_at: null,
+          price_proposed_by: null,
           updated_at: new Date(),
         },
         select: { id: true, coins_cost: true, status: true },
@@ -547,29 +561,39 @@ export class BookingService {
     ];
 
     if (diff > 0) {
+      // Proposed price is higher — deduct extra from student
+      const student = await this.prisma.profiles.findUnique({
+        where: { id: studentId },
+        select: { coins_balance: true },
+      });
+      if (!student) throw new NotFoundException('Student not found.');
+      if (student.coins_balance < diff) {
+        throw new BadRequestException(`Insufficient coins for price difference. Need ${diff} more coins.`);
+      }
       ops.push(
-        this.prisma.profiles.update({
-          where: { id: studentId },
-          data: { coins_balance: { decrement: diff } },
-        }),
+        this.prisma.profiles.update({ where: { id: studentId }, data: { coins_balance: { decrement: diff } } }),
         this.prisma.coin_transactions.create({
-          data: {
-            profile_id: studentId,
-            amount: -diff,
-            kind: 'BOOKING_PAYMENT',
-            ref_id: bookingId,
-            note: 'Price proposal accepted — additional coins deducted',
-          },
+          data: { profile_id: studentId, amount: -diff, kind: 'BOOKING_PAYMENT', ref_id: bookingId, note: 'Price negotiation accepted — additional coins deducted' },
+        }),
+      );
+    } else if (diff < 0) {
+      // Proposed price is lower — refund the difference to student
+      const refund = Math.abs(diff);
+      ops.push(
+        this.prisma.profiles.update({ where: { id: studentId }, data: { coins_balance: { increment: refund } } }),
+        this.prisma.coin_transactions.create({
+          data: { profile_id: studentId, amount: refund, kind: 'REFUND', ref_id: bookingId, note: 'Price negotiation accepted — coins refunded' },
         }),
       );
     }
 
+    const notifyId = booking.price_proposed_by!;
     ops.push(
       this.prisma.notifications.create({
         data: {
-          profile_id: booking.tutor_id,
+          profile_id: notifyId,
           type: 'PRICE_ACCEPTED',
-          payload: { booking_id: bookingId, new_coins_cost: booking.price_proposed_coins },
+          payload: { booking_id: bookingId, new_coins_cost: proposedCost },
         },
       }),
     );
@@ -578,15 +602,20 @@ export class BookingService {
     return result;
   }
 
-  async rejectPrice(bookingId: string, studentId: string) {
+  async rejectPrice(bookingId: string, userId: string) {
     const booking = await this.prisma.bookings.findUnique({ where: { id: bookingId } });
     if (!booking) throw new NotFoundException('Booking not found.');
-    if (booking.student_id !== studentId) {
-      throw new ForbiddenException('Only the student can reject a price proposal.');
-    }
+
+    const isParty = booking.student_id === userId || booking.tutor_id === userId;
+    if (!isParty) throw new ForbiddenException('Not your booking.');
     if (!booking.price_proposed_coins) {
       throw new BadRequestException('No price proposal on this booking.');
     }
+    if (booking.price_proposed_by === userId) {
+      throw new ForbiddenException('Cannot reject your own proposal.');
+    }
+
+    const notifyId = booking.price_proposed_by!;
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.bookings.update({
@@ -595,15 +624,16 @@ export class BookingService {
           price_proposed_coins: null,
           price_proposal_message: null,
           price_proposal_expires_at: null,
+          price_proposed_by: null,
           updated_at: new Date(),
         },
         select: { id: true, coins_cost: true, status: true },
       }),
       this.prisma.notifications.create({
         data: {
-          profile_id: booking.tutor_id,
+          profile_id: notifyId,
           type: 'PRICE_REJECTED',
-          payload: { booking_id: bookingId, student_id: studentId },
+          payload: { booking_id: bookingId, rejected_by: userId },
         },
       }),
     ]);
@@ -859,6 +889,22 @@ export class BookingService {
     }
     if (booking.price_proposed_coins) {
       throw new BadRequestException('Resolve the pending price proposal before confirming.');
+    }
+
+    // Prevent confirming if another confirmed booking already occupies this time
+    const conflict = await this.prisma.bookings.findFirst({
+      where: {
+        tutor_id: tutorId,
+        status: 'confirmed',
+        id: { not: bookingId },
+        start_at: { lt: booking.end_at },
+        end_at: { gt: booking.start_at },
+      },
+    });
+    if (conflict) {
+      throw new BadRequestException(
+        `You already have a confirmed booking that overlaps this time (${conflict.start_at.toISOString()} – ${conflict.end_at.toISOString()}). Decline one of them first.`,
+      );
     }
 
     const [result] = await this.prisma.$transaction([

@@ -773,7 +773,7 @@ export class AdminService {
           },
         },
         tutor_offers: {
-          select: { id: true, title: true, summary: true, coins_per_hour: true, duration_minutes: true },
+          select: { id: true, title: true, summary: true, coins_per_session: true, duration_minutes: true },
         },
         reviews: {
           select: { id: true, reviewer_id: true, rating: true, comment: true, created_at: true },

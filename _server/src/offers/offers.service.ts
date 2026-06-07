@@ -30,8 +30,8 @@ function applyOfferPenalty(offer: any, tutor: any) {
   if (!penalized) return offer;
   const pct = Number(tutor.penalty_price_pct ?? 0);
   if (pct <= 0) return offer;
-  const discountedRate = Math.ceil(offer.coins_per_hour * (1 - pct / 100));
-  return { ...offer, coins_per_hour: discountedRate };
+  const discountedCoins = Math.ceil(offer.coins_per_session * (1 - pct / 100));
+  return { ...offer, coins_per_session: discountedCoins };
 }
 
 @Injectable()
@@ -66,7 +66,7 @@ export class OffersService {
           { summary: { contains: search, mode: 'insensitive' } },
         ],
       }),
-      ...(maxCoins && { coins_per_hour: { lte: maxCoins } }),
+      ...(maxCoins && { coins_per_session: { lte: maxCoins } }),
       ...(subject && { subject_ids: { has: subject } }),
       ...(category && { subject_category: category }),
     };
@@ -82,11 +82,14 @@ export class OffersService {
           title: true,
           summary: true,
           thumbnail_url: true,
-          coins_per_hour: true,
+          coins_per_session: true,
           duration_minutes: true,
           subject_ids: true,
           subject_category: true,
           expires_at: true,
+          available_days: true,
+          available_time_from: true,
+          available_time_to: true,
           created_at: true,
           profiles: { select: TUTOR_SELECT },
         },
@@ -97,11 +100,7 @@ export class OffersService {
     const offers = raw.map((o) => {
       const adjustedOffer = applyOfferPenalty(o, o.profiles);
       const adjustedTutor = applyTutorPenalty(o.profiles);
-      return {
-        ...adjustedOffer,
-        profiles: adjustedTutor,
-        coins_per_session: Math.ceil((adjustedOffer.coins_per_hour * o.duration_minutes) / 60),
-      };
+      return { ...adjustedOffer, profiles: adjustedTutor };
     });
 
     return { data: offers, total, page, limit };
@@ -122,11 +121,14 @@ export class OffersService {
         summary: true,
         about: true,
         thumbnail_url: true,
-        coins_per_hour: true,
+        coins_per_session: true,
         duration_minutes: true,
         subject_ids: true,
         subject_category: true,
         expires_at: true,
+        available_days: true,
+        available_time_from: true,
+        available_time_to: true,
         created_at: true,
         updated_at: true,
         profiles: {
@@ -163,7 +165,6 @@ export class OffersService {
     return {
       ...adjustedOffer,
       profiles: adjustedTutor,
-      coins_per_session: Math.ceil((adjustedOffer.coins_per_hour * offer.duration_minutes) / 60),
       tutor_reviews: reviews,
     };
   }

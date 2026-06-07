@@ -1,4 +1,4 @@
-import { IsISO8601, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsISO8601, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateAvailabilityDto {
   @IsISO8601()
@@ -10,4 +10,9 @@ export class CreateAvailabilityDto {
   @IsOptional()
   @IsString()
   timezone?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  max_capacity?: number;
 }

@@ -8,10 +8,11 @@ import {
   IsString,
   IsUrl,
   IsUUID,
+  Matches,
   MaxLength,
   Min,
 } from 'class-validator';
-import { SUBJECT_CATEGORIES } from './create-tutor-offer.dto';
+import { SUBJECT_CATEGORIES, WEEK_DAYS } from './create-tutor-offer.dto';
 
 export class UpdateTutorOfferDto {
   @IsOptional()
@@ -32,7 +33,7 @@ export class UpdateTutorOfferDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  coins_per_hour?: number;
+  coins_per_session?: number;
 
   @IsOptional()
   @IsInt()
@@ -59,4 +60,17 @@ export class UpdateTutorOfferDto {
   @IsOptional()
   @IsDateString()
   expires_at?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsIn(WEEK_DAYS, { each: true })
+  available_days?: string[];
+
+  @IsOptional()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'available_time_from must be HH:MM' })
+  available_time_from?: string;
+
+  @IsOptional()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'available_time_to must be HH:MM' })
+  available_time_to?: string;
 }

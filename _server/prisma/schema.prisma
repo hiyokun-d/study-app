@@ -37,8 +37,10 @@ model bookings {
   expires_at                             DateTime?             @db.Timestamptz(6)
   price_proposal_expires_at              DateTime?             @db.Timestamptz(6)
   price_proposal_message                 String?
-  /// price negotiation — tutor proposes higher cost, student accepts/rejects
+  /// price negotiation — either party can propose a new coin amount
   price_proposed_coins                   Int?
+  /// UUID of who made the last price proposal (student or tutor)
+  price_proposed_by                      String?               @db.Uuid
   profiles_bookings_student_idToprofiles profiles              @relation("bookings_student_idToprofiles", fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   tutor_availabilities                   tutor_availabilities? @relation(fields: [tutor_availability_id], references: [id], onUpdate: NoAction)
   profiles_bookings_tutor_idToprofiles   profiles              @relation("bookings_tutor_idToprofiles", fields: [tutor_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -227,6 +229,8 @@ model tutor_availabilities {
   available_from DateTime   @db.Timestamptz(6)
   available_to   DateTime   @db.Timestamptz(6)
   timezone       String?
+  /// max students that can book this slot; 1 = exclusive (default), >1 = group session
+  max_capacity   Int        @default(1)
   created_at     DateTime?  @default(now()) @db.Timestamptz(6)
   bookings       bookings[]
   profiles       profiles   @relation(fields: [tutor_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -247,8 +251,14 @@ model tutor_offers {
   is_active        Boolean?   @default(true)
   created_at       DateTime?  @default(now()) @db.Timestamptz(6)
   updated_at       DateTime?  @default(now()) @db.Timestamptz(6)
-  /// session price in coins (overrides profile book_price_coins when set)
-  coins_per_hour   Int        @default(10)
+  /// flat session price in coins — one booking = this many coins (no hourly calculation)
+  coins_per_session Int       @default(10)
+  /// recurring weekly availability: days tutor is available for this offer (e.g. ["MON","WED"])
+  available_days     String[] @default([])
+  /// start time of daily availability window, HH:MM (e.g. "09:00"), optional
+  available_time_from String?
+  /// end time of daily availability window, HH:MM (e.g. "17:00"), optional
+  available_time_to   String?
   thumbnail_url    String?
   /// offer auto-deactivates and blocks new bookings after this date
   expires_at       DateTime?  @db.Timestamptz(6)
