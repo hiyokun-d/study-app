@@ -335,7 +335,7 @@ export class BookingService {
     const bookings = await this.prisma.bookings.findMany({
       where: {
         student_id: studentId,
-        ...(status ? { status: status as any } : {}),
+        ...(status ? { status: { in: status.split(',').map(s => s.trim()) as any[] } } : {}),
         ...((from || to) ? { start_at: { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to) }) } } : {}),
       },
       skip,
@@ -382,7 +382,7 @@ export class BookingService {
     return this.prisma.bookings.findMany({
       where: {
         tutor_id: tutorId,
-        ...(status ? { status: status as any } : {}),
+        ...(status ? { status: { in: status.split(',').map(s => s.trim()) as any[] } } : {}),
         ...((from || to) ? { start_at: { ...(from && { gte: new Date(from) }), ...(to && { lte: new Date(to) }) } } : {}),
       },
       skip,

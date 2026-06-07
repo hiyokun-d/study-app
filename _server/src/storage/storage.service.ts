@@ -40,6 +40,19 @@ export class StorageService {
     }
   }
 
+  private async deleteObject(bucket: string, objectPath: string): Promise<void> {
+    const encodedBucket = encodeURIComponent(bucket);
+    await fetch(`${this.supabaseUrl}/storage/v1/object/${encodedBucket}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${this.serviceKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prefixes: [objectPath] }),
+    });
+    // Ignore errors — file may not exist yet
+  }
+
   private async createSignedUploadUrl(
     bucket: string,
     objectPath: string,
@@ -86,7 +99,8 @@ export class StorageService {
       throw new BadRequestException('Avatar exceeds 6 MB limit.');
     }
 
-    // Path is deterministic: one slot per user, overwrites on re-upload
+    // Delete existing avatar so the signed URL creation doesn't get a 409 duplicate
+    await this.deleteObject(AVATAR_BUCKET, userId);
     const signed_url = await this.createSignedUploadUrl(AVATAR_BUCKET, userId);
     const encodedBucket = encodeURIComponent(AVATAR_BUCKET);
     const public_url = `${this.supabaseUrl}/storage/v1/object/public/${encodedBucket}/${userId}`;
