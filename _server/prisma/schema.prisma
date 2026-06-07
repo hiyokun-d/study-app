@@ -31,6 +31,10 @@ model bookings {
   reschedule_requested_by                String?               @db.Uuid
   /// set once session reminder notification is sent — prevents duplicates
   session_notified_at                    DateTime?             @db.Timestamptz(6)
+  /// timestamp when the tutor first called getJoinInfo; null = tutor never joined
+  tutor_joined_at                        DateTime?             @db.Timestamptz(6)
+  /// reason for cancellation e.g. TUTOR_NO_SHOW | STUDENT_LATE_CANCEL
+  cancel_reason                          String?
   /// student's reason for booking — shown to tutor before they confirm
   description                            String?
   /// auto-decline pending bookings after this time (1 hour from creation)

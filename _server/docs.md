@@ -252,7 +252,7 @@ Get a single tutor's full public profile.
 
 ### `GET /user/tutor/:id/availability`
 
-Get a tutor's available time slots. Public endpoint.
+Get a tutor's available time slots. Public endpoint. Only slots with remaining capacity are returned.
 
 **Path parameter:** `id` — tutor UUID
 
@@ -264,10 +264,15 @@ Get a tutor's available time slots. Public endpoint.
     "id": "uuid",
     "available_from": "2026-06-10T08:00:00Z",
     "available_to": "2026-06-10T12:00:00Z",
-    "timezone": "Asia/Jakarta"
+    "timezone": "Asia/Jakarta",
+    "max_capacity": 3,
+    "bookings_count": 1,
+    "spots_left": 2
   }
 ]
 ```
+
+> Slots where `spots_left === 0` are excluded automatically.
 
 ---
 
@@ -335,25 +340,27 @@ Update the current user's online presence status.
 
 **Auth required · Tutor only**
 
-Create an availability time slot for yourself.
+Create an availability time slot for yourself. Use `max_capacity > 1` to allow multiple students to book the same slot (group sessions).
 
 **Request body**
 
-| Field            | Type   | Required | Description                          |
-|------------------|--------|----------|--------------------------------------|
-| `available_from` | string | Yes      | ISO 8601 datetime (e.g. `2026-06-10T08:00:00Z`) |
-| `available_to`   | string | Yes      | ISO 8601 datetime                    |
-| `timezone`       | string | No       | IANA timezone (e.g. `Asia/Jakarta`)  |
+| Field            | Type   | Required | Description                                             |
+|------------------|--------|----------|---------------------------------------------------------|
+| `available_from` | string | Yes      | ISO 8601 datetime (e.g. `2026-06-10T08:00:00Z`)         |
+| `available_to`   | string | Yes      | ISO 8601 datetime                                       |
+| `timezone`       | string | No       | IANA timezone (e.g. `Asia/Jakarta`)                     |
+| `max_capacity`   | number | No       | Max students per slot. Default `1` (exclusive/private)  |
 
 ```json
 {
   "available_from": "2026-06-10T08:00:00Z",
   "available_to": "2026-06-10T12:00:00Z",
-  "timezone": "Asia/Jakarta"
+  "timezone": "Asia/Jakarta",
+  "max_capacity": 3
 }
 ```
 
-**Response `201`** — created availability slot.
+**Response `201`** — created availability slot including `max_capacity`.
 
 ---
 
@@ -373,33 +380,41 @@ Delete one of your availability slots.
 
 **Auth required · Tutor only**
 
-Create a new tutor offer (a service listing students can book).
+Create a new tutor offer (a service listing students can book). The price is a flat per-session coin amount — no hourly calculation.
 
 **Request body**
 
-| Field              | Type     | Required | Description                                           |
-|--------------------|----------|----------|-------------------------------------------------------|
-| `title`            | string   | Yes      | Max 100 characters                                    |
-| `summary`          | string   | No       | Short description, max 300 characters                 |
-| `about`            | string   | No       | Long description, max 2000 characters                 |
-| `coins_per_hour`   | number   | Yes      | Price in coins per hour (min 1)                       |
-| `duration_minutes` | number   | No       | Fixed session length in minutes (min 15)              |
-| `subject_ids`      | string[] | No       | Array of subject UUIDs to tag the offer               |
-| `subject_category` | string   | No       | One of the [subject categories](#subject-categories)  |
-| `thumbnail_url`    | string   | No       | Full URL to a thumbnail image                         |
-| `expires_at`       | string   | No       | ISO 8601 datetime — offer auto-deactivates after this |
+| Field                | Type     | Required | Description                                                     |
+|----------------------|----------|----------|-----------------------------------------------------------------|
+| `title`              | string   | Yes      | Max 100 characters                                              |
+| `summary`            | string   | No       | Short description, max 300 characters                           |
+| `about`              | string   | No       | Long description, max 2000 characters                           |
+| `coins_per_session`  | number   | Yes      | Flat price in coins for one session (min 1)                     |
+| `duration_minutes`   | number   | No       | Session length in minutes (min 15, default 60)                  |
+| `subject_ids`        | string[] | No       | Array of subject UUIDs to tag the offer                         |
+| `subject_category`   | string   | No       | One of the [subject categories](#subject-categories)            |
+| `thumbnail_url`      | string   | No       | Full URL to a thumbnail image                                   |
+| `expires_at`         | string   | No       | ISO 8601 datetime — offer auto-deactivates after this           |
+| `available_days`     | string[] | No       | Days tutor is available: `MON` `TUE` `WED` `THU` `FRI` `SAT` `SUN` |
+| `available_time_from`| string   | No       | Daily availability start, `HH:MM` format (e.g. `"09:00"`)      |
+| `available_time_to`  | string   | No       | Daily availability end, `HH:MM` format (e.g. `"17:00"`)        |
 
 ```json
 {
   "title": "Calculus for Beginners",
   "summary": "Learn derivatives and integrals step by step.",
-  "coins_per_hour": 20,
+  "coins_per_session": 20,
   "duration_minutes": 60,
-  "subject_category": "MATH"
+  "subject_category": "MATH",
+  "available_days": ["MON", "WED", "FRI"],
+  "available_time_from": "09:00",
+  "available_time_to": "12:00"
 }
 ```
 
 **Response `201`** — created offer object.
+
+> Set `is_active: false` via the update endpoint to take an offer offline (stop accepting new bookings for that subject).
 
 ---
 
@@ -425,12 +440,15 @@ Update one of your offers. All fields are optional.
 
 | Field       | Type    | Description                                |
 |-------------|---------|--------------------------------------------|
-| `is_active` | boolean | `true` to re-activate, `false` to deactivate |
+| `is_active` | boolean | `true` to re-activate, `false` to take offline |
 
 ```json
 {
-  "coins_per_hour": 25,
-  "is_active": false
+  "coins_per_session": 25,
+  "is_active": false,
+  "available_days": ["TUE", "THU"],
+  "available_time_from": "14:00",
+  "available_time_to": "18:00"
 }
 ```
 
@@ -498,15 +516,15 @@ Browse all active tutor offers with filtering. Public endpoint.
 
 **Query parameters**
 
-| Param       | Type   | Default | Description                                     |
-|-------------|--------|---------|-------------------------------------------------|
-| `search`    | string | —       | Search by offer title or tutor name             |
-| `subject`   | string | —       | Filter by subject UUID                          |
-| `category`  | string | —       | Filter by subject category (see categories above) |
-| `maxCoins`  | number | —       | Maximum coins per hour                          |
-| `minRating` | number | —       | Minimum average tutor rating (e.g. `4.0`)       |
-| `page`      | number | `1`     | Page number                                     |
-| `limit`     | number | `20`    | Results per page                                |
+| Param       | Type   | Default | Description                                          |
+|-------------|--------|---------|------------------------------------------------------|
+| `search`    | string | —       | Search by offer title or tutor name                  |
+| `subject`   | string | —       | Filter by subject UUID                               |
+| `category`  | string | —       | Filter by subject category (see categories above)    |
+| `maxCoins`  | number | —       | Maximum `coins_per_session` (flat session price)     |
+| `minRating` | number | —       | Minimum average tutor rating (e.g. `4.0`)            |
+| `page`      | number | `1`     | Page number                                          |
+| `limit`     | number | `20`    | Results per page                                     |
 
 ```
 GET /offers?category=MATH&maxCoins=25&minRating=4&page=1&limit=10
@@ -521,13 +539,16 @@ GET /offers?category=MATH&maxCoins=25&minRating=4&page=1&limit=10
       "id": "uuid",
       "title": "Calculus for Beginners",
       "summary": "Learn derivatives step by step.",
-      "coins_per_hour": 20,
+      "coins_per_session": 20,
       "duration_minutes": 60,
       "subject_category": "MATH",
-      "tutor": {
+      "available_days": ["MON", "WED", "FRI"],
+      "available_time_from": "09:00",
+      "available_time_to": "12:00",
+      "profiles": {
         "id": "uuid",
         "full_name": "Alice",
-        "average_rating": 4.8
+        "overall_rating": 4.8
       }
     }
   ],
@@ -552,16 +573,19 @@ Get a single offer's full detail, including the tutor's profile and recent revie
   "id": "uuid",
   "title": "Calculus for Beginners",
   "about": "Long description...",
-  "coins_per_hour": 20,
+  "coins_per_session": 20,
   "duration_minutes": 60,
-  "tutor": {
+  "available_days": ["MON", "WED", "FRI"],
+  "available_time_from": "09:00",
+  "available_time_to": "12:00",
+  "profiles": {
     "id": "uuid",
     "full_name": "Alice",
     "bio": "...",
-    "average_rating": 4.8,
+    "overall_rating": 4.8,
     "subjects": ["Math"]
   },
-  "reviews": [ ... ]
+  "tutor_reviews": [ ... ]
 }
 ```
 
@@ -605,7 +629,11 @@ You can book in two ways:
 
 **Response `201`** — created booking object.
 
-> Coins are deducted from the student's balance immediately. If the tutor declines or the booking expires, coins are refunded automatically.
+> Coins are deducted from the student's balance immediately at the offer's `coins_per_session` price. If the tutor declines or the booking expires, coins are refunded automatically.
+
+> **Multiple pending bookings:** A tutor can now receive multiple pending requests at overlapping times. Booking creation only fails if there is already a *confirmed* booking at that exact time. Tutors manage their queue and confirm or decline each request.
+
+> **Slot capacity:** If `availabilityId` is provided, the booking is counted against that slot's `max_capacity`. New bookings are blocked once the slot is full.
 
 ---
 
@@ -668,6 +696,8 @@ Get the video call / session join information for a confirmed booking. Only the 
 
 Confirm a pending booking request. This signals to the student that the session is accepted.
 
+> Returns `400` if the tutor already has another **confirmed** booking that overlaps this time window. Decline the conflicting booking first.
+
 **Response `200`** — updated booking with `status: "confirmed"`.
 
 ---
@@ -684,9 +714,31 @@ Decline a pending booking. Coins are refunded to the student.
 
 ### `PATCH /booking/:id/cancel`
 
-Cancel a confirmed booking. Either the student or tutor may cancel.
+Cancel a booking. Either the student or tutor may cancel.
 
-**Response `200`** — updated booking with `status: "cancelled"`.
+**Cancellation rules (confirmed bookings only):**
+
+| Who cancels | Hours until session starts | Student refund | Tutor gets |
+|-------------|---------------------------|----------------|------------|
+| Student | ≥ 24h | 100% | nothing |
+| Student | 2h – 24h | 50% | 50% (`LATE_CANCEL_FEE`) |
+| Student | < 2h | ❌ 400 error — window closed | — |
+| Tutor | any time | 100% | nothing |
+| Either | booking still `pending` | 100% | nothing |
+
+**Response `200`**
+
+```json
+{
+  "id": "uuid",
+  "status": "cancelled",
+  "coins_cost": 20,
+  "coins_refunded": 10,
+  "tutor_compensation": 10
+}
+```
+
+> Use `coins_cost` (already in booking detail) and `coins_refunded` to calculate and display the refund amount in the cancellation dialog before the user confirms.
 
 ---
 
@@ -702,43 +754,56 @@ Mark a confirmed session as completed. Coins are transferred from the student's 
 
 ### `PATCH /booking/:id/propose-price`
 
-**Tutor only**
+**Auth required · Student or Tutor**
 
-Propose a custom price for an existing booking (price negotiation). The proposal expires after 2 hours if not accepted.
+Propose a new price for a pending booking. **Both sides can negotiate** — students can propose lower, tutors can propose higher. The proposal expires after 2 hours.
+
+Rules:
+- You cannot propose the same price that is already set.
+- You cannot propose again while your own proposal is still pending (wait for the other party to respond).
+- Either side can counter-propose (overwrites the previous proposal).
+
+The booking's response now includes:
+- `price_proposed_coins` — the proposed new coin amount
+- `price_proposed_by` — UUID of who made the proposal (check against your own ID to know whose turn it is)
 
 **Request body**
 
-| Field             | Type   | Required | Description                            |
-|-------------------|--------|----------|----------------------------------------|
-| `proposed_coins`  | number | Yes      | New price in coins (min 1)             |
-| `message`         | string | No       | Optional message to the student        |
+| Field             | Type   | Required | Description                                   |
+|-------------------|--------|----------|-----------------------------------------------|
+| `proposed_coins`  | number | Yes      | New price in coins (min 1)                    |
+| `message`         | string | No       | Optional message explaining the proposal      |
 
 ```json
 {
-  "proposed_coins": 30,
-  "message": "This session requires extra prep time."
+  "proposed_coins": 15,
+  "message": "Can we do 15 coins? I'm a first-time student."
 }
 ```
 
 **Response `200`** — updated booking with proposal details.
 
+> **UI logic:** If `price_proposed_by === currentUser.id` → show "Waiting for response." If `price_proposed_by !== currentUser.id && price_proposed_coins != null` → show Accept / Reject / Counter buttons.
+
 ---
 
 ### `PATCH /booking/:id/accept-price`
 
-**Student only**
+**Auth required · The party who did NOT make the last proposal**
 
-Accept the tutor's proposed price. The coin difference is adjusted on the student's balance.
+Accept the pending price proposal. Coin balances are adjusted automatically:
+- Proposed > current price → extra coins deducted from student
+- Proposed < current price → difference refunded to student
 
-**Response `200`** — updated booking.
+**Response `200`** — updated booking with new `coins_cost`.
 
 ---
 
 ### `PATCH /booking/:id/reject-price`
 
-**Student only**
+**Auth required · The party who did NOT make the last proposal**
 
-Reject the tutor's proposed price. The proposal is cleared; original price stays.
+Reject the pending price proposal. The proposal is cleared; original price stays. The other party can propose again.
 
 **Response `200`** — updated booking.
 
@@ -1152,11 +1217,15 @@ Get the current user's notification feed, newest first.
 | `BOOKING_EXPIRED_TUTOR`  | Sent to tutor when their pending booking expired      |
 | `SESSION_REMINDER`       | 10–20 min before a confirmed session starts           |
 | `SESSION_COMPLETED`      | Session marked complete (coins transferred)           |
-| `PRICE_PROPOSAL`         | Tutor proposed a new price for your booking           |
+| `PRICE_PROPOSED`         | Either party proposed a new price for the booking     |
+| `PRICE_ACCEPTED`         | Your price proposal was accepted                      |
+| `PRICE_REJECTED`         | Your price proposal was rejected                      |
 | `PRICE_PROPOSAL_EXPIRED` | Price proposal window (2 h) passed without response   |
 | `RESCHEDULE_PROPOSED`    | Other party proposed new session time                 |
 | `RESCHEDULE_ACCEPTED`    | Your reschedule proposal was accepted                 |
 | `RESCHEDULE_REJECTED`    | Your reschedule proposal was rejected                 |
+| `TUTOR_NO_SHOW`          | Sent to student — tutor never joined, full refund     |
+| `TUTOR_NO_SHOW_FLAGGED`  | Sent to tutor — session marked as no-show             |
 
 ---
 
@@ -1635,11 +1704,12 @@ Sends `SESSION_REMINDER` notifications to both parties of any confirmed session 
 
 ### `GET /internal/process-expirations`
 
-Handles three cleanup tasks, runs every 10 minutes:
+Handles four tasks, runs every 10 minutes:
 
 1. **Expire pending bookings** — bookings pending for over 1 hour are set to `expired` and coins are refunded to the student.
 2. **Clear stale price proposals** — proposals older than 2 hours with no response are removed.
-3. **Auto-complete stale sessions** — confirmed sessions whose `end_at` passed more than 2 hours ago are automatically completed and coins are transferred to the tutor.
+3. **Tutor no-show** — confirmed sessions whose `end_at` passed more than 2 hours ago and where the tutor never called `/join` are cancelled with `cancel_reason: TUTOR_NO_SHOW` and coins fully refunded to the student.
+4. **Auto-complete stale sessions** — confirmed sessions whose `end_at` passed more than **24 hours** ago and where the tutor did join are automatically completed and coins transferred to the tutor. The 24-hour grace period lets tutors manually complete and add notes first.
 
 **Response `200`**
 
@@ -1647,6 +1717,7 @@ Handles three cleanup tasks, runs every 10 minutes:
 {
   "expired_bookings": 2,
   "cleared_price_proposals": 1,
+  "tutor_no_show": 1,
   "auto_completed_sessions": 3
 }
 ```

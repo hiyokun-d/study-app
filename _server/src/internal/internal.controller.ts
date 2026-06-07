@@ -173,11 +173,65 @@ export class InternalController {
       );
     }
 
-    // ── 3. Auto-complete stale confirmed sessions ─────────────────────────────
-    // Confirmed bookings that ended > 2 hours ago and tutor never marked complete
-    const staleThreshold = new Date(now.getTime() - 2 * 60 * 60_000);
+    // ── 3. Tutor no-show — session ended > 2h ago and tutor never joined ────────
+    const noShowThreshold = new Date(now.getTime() - 2 * 60 * 60_000);
+    const noShowSessions = await this.prisma.bookings.findMany({
+      where: { status: 'confirmed', end_at: { lt: noShowThreshold }, tutor_joined_at: null },
+      select: { id: true, student_id: true, tutor_id: true, coins_cost: true },
+    });
+
+    for (const session of noShowSessions) {
+      const coinsCost = session.coins_cost ?? 0;
+      bookingOps.push(
+        this.prisma.bookings.update({
+          where: { id: session.id },
+          data: { status: 'cancelled', cancel_reason: 'TUTOR_NO_SHOW', updated_at: now },
+        }),
+      );
+      if (coinsCost > 0) {
+        bookingOps.push(
+          this.prisma.profiles.update({
+            where: { id: session.student_id },
+            data: { coins_balance: { increment: coinsCost } },
+          }),
+          this.prisma.coin_transactions.create({
+            data: {
+              profile_id: session.student_id,
+              amount: coinsCost,
+              kind: 'REFUND',
+              ref_id: session.id,
+              note: 'Tutor did not join the session — full refund',
+            },
+          }),
+        );
+      }
+      bookingOps.push(
+        this.prisma.notifications.create({
+          data: {
+            profile_id: session.student_id,
+            type: 'TUTOR_NO_SHOW',
+            payload: { booking_id: session.id, coins_refunded: coinsCost },
+          },
+        }),
+        this.prisma.notifications.create({
+          data: {
+            profile_id: session.tutor_id,
+            type: 'TUTOR_NO_SHOW_FLAGGED',
+            payload: { booking_id: session.id },
+          },
+        }),
+      );
+    }
+
+    // ── 4. Auto-complete stale confirmed sessions ─────────────────────────────
+    // Confirmed bookings that ended > 24h ago and tutor actually joined (no-show already handled)
+    const autoCompleteThreshold = new Date(now.getTime() - 24 * 60 * 60_000);
     const staleSessions = await this.prisma.bookings.findMany({
-      where: { status: 'confirmed', end_at: { lt: staleThreshold } },
+      where: {
+        status: 'confirmed',
+        end_at: { lt: autoCompleteThreshold },
+        tutor_joined_at: { not: null },
+      },
       select: { id: true, student_id: true, tutor_id: true, coins_cost: true, duration_minutes: true },
     });
 
@@ -231,6 +285,7 @@ export class InternalController {
     return {
       expired_bookings: expiredBookings.length,
       cleared_price_proposals: expiredProposals.length,
+      tutor_no_show: noShowSessions.length,
       auto_completed_sessions: staleSessions.length,
     };
   }

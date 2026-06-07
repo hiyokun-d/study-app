@@ -437,6 +437,7 @@ export class BookingService {
         status: true,
         start_at: true,
         end_at: true,
+        tutor_joined_at: true,
         profiles_bookings_student_idToprofiles: { select: { full_name: true } },
         profiles_bookings_tutor_idToprofiles: { select: { full_name: true } },
       },
@@ -448,6 +449,14 @@ export class BookingService {
     }
     if (booking.status !== 'confirmed') {
       throw new BadRequestException('Booking must be confirmed to join the call.');
+    }
+
+    // Stamp tutor_joined_at on first join — used for no-show detection
+    if (booking.tutor_id === userId && !booking.tutor_joined_at) {
+      await this.prisma.bookings.update({
+        where: { id: bookingId },
+        data: { tutor_joined_at: new Date() },
+      });
     }
 
     const studentName = booking.profiles_bookings_student_idToprofiles.full_name;
@@ -837,45 +846,93 @@ export class BookingService {
     }
 
     const coinsCost = booking.coins_cost ?? 0;
+    const isStudent = userId === booking.student_id;
+    const isConfirmed = ['confirmed', 'rescheduling'].includes(booking.status as string);
+
+    let refundCoins = coinsCost;
+    let tutorCompensation = 0;
+    let cancelReason: string | null = null;
+
+    if (isConfirmed && isStudent && coinsCost > 0) {
+      const now = new Date();
+      const hoursUntilStart = (booking.start_at.getTime() - now.getTime()) / 3_600_000;
+
+      if (hoursUntilStart < 2) {
+        throw new BadRequestException(
+          'Cancellation window has closed. Sessions starting in under 2 hours cannot be cancelled.',
+        );
+      } else if (hoursUntilStart < 24) {
+        refundCoins = Math.floor(coinsCost / 2);
+        tutorCompensation = coinsCost - refundCoins;
+        cancelReason = 'STUDENT_LATE_CANCEL';
+      }
+      // >= 24h: full refund, no compensation (defaults already set)
+    }
+
     const ops: any[] = [
       this.prisma.bookings.update({
         where: { id: bookingId },
-        data: { status: 'cancelled', updated_at: new Date() },
+        data: { status: 'cancelled', cancel_reason: cancelReason, updated_at: new Date() },
         select: { id: true, status: true, coins_cost: true },
       }),
     ];
 
-    if (coinsCost > 0) {
+    if (refundCoins > 0) {
       ops.push(
         this.prisma.profiles.update({
           where: { id: booking.student_id },
-          data: { coins_balance: { increment: coinsCost } },
+          data: { coins_balance: { increment: refundCoins } },
         }),
         this.prisma.coin_transactions.create({
           data: {
             profile_id: booking.student_id,
-            amount: coinsCost,
+            amount: refundCoins,
             kind: 'REFUND',
             ref_id: bookingId,
-            note: 'Booking cancelled — coins refunded',
+            note: cancelReason === 'STUDENT_LATE_CANCEL'
+              ? 'Late cancellation — 50% refunded'
+              : 'Booking cancelled — coins refunded',
           },
         }),
       );
     }
 
-    const notifyId = userId === booking.student_id ? booking.tutor_id : booking.student_id;
+    if (tutorCompensation > 0) {
+      ops.push(
+        this.prisma.profiles.update({
+          where: { id: booking.tutor_id },
+          data: { coins_balance: { increment: tutorCompensation } },
+        }),
+        this.prisma.coin_transactions.create({
+          data: {
+            profile_id: booking.tutor_id,
+            amount: tutorCompensation,
+            kind: 'LATE_CANCEL_FEE',
+            ref_id: bookingId,
+            note: 'Student cancelled within 24h — late cancellation fee',
+          },
+        }),
+      );
+    }
+
+    const notifyId = isStudent ? booking.tutor_id : booking.student_id;
     ops.push(
       this.prisma.notifications.create({
         data: {
           profile_id: notifyId,
           type: 'BOOKING_CANCELLED',
-          payload: { booking_id: bookingId, cancelled_by: userId, coins_refunded: coinsCost },
+          payload: {
+            booking_id: bookingId,
+            cancelled_by: userId,
+            coins_refunded: refundCoins,
+            tutor_compensation: tutorCompensation,
+          },
         },
       }),
     );
 
     const [result] = await this.prisma.$transaction(ops);
-    return { ...result, coins_refunded: coinsCost };
+    return { ...result, coins_refunded: refundCoins, tutor_compensation: tutorCompensation };
   }
 
   async confirmBooking(bookingId: string, tutorId: string) {
