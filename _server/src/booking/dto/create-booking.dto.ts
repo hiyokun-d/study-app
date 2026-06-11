@@ -1,4 +1,8 @@
-import { IsISO8601, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Min, Matches } from 'class-validator';
+
+// Require an explicit UTC offset (Z or ±HH:MM) so the server never guesses the timezone.
+// Flutter must send `.toUtc().toIso8601String()` which appends "Z".
+const ISO8601_WITH_TZ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
 
 export class CreateBookingDto {
   // Required only when NOT booking via an offer
@@ -11,12 +15,12 @@ export class CreateBookingDto {
   @IsUUID()
   tutorOfferId?: string;
 
-  @IsISO8601()
+  @Matches(ISO8601_WITH_TZ, { message: 'startAt must be an ISO 8601 datetime with explicit timezone (e.g. 2025-06-11T10:00:00Z or +07:00)' })
   startAt: string;
 
   // Optional — auto-computed from offer duration when tutorOfferId is given
   @IsOptional()
-  @IsISO8601()
+  @Matches(ISO8601_WITH_TZ, { message: 'endAt must be an ISO 8601 datetime with explicit timezone' })
   endAt?: string;
 
   // Optional when tutorOfferId given
