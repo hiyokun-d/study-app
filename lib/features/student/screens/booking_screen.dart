@@ -74,7 +74,7 @@ class _BookingScreenState extends State<BookingScreen> {
     final result = await BookingApiService.instance.createBooking(
       tutorId: widget.tutorId,
       tutorOfferId: widget.offer['id'],
-      startAt: _selectedDateTime!.toIso8601String(),
+      startAt: _selectedDateTime!.toUtc().toIso8601String(),
       notes: _notesController.text.trim(),
     );
 
